@@ -3,6 +3,7 @@
 	import Button from '#lib/components/ui/Button.svelte';
 	import Icon from '#lib/components/ui/Icon.svelte';
 	import { categoryOrder, categoryStyles } from '#lib/layer-style.ts';
+	import { flip } from '#lib/flip.ts';
 	import { fmt, searchMatcher } from '#lib/format.ts';
 	import type { Material, MaterialCategory } from '#lib/physics/types.ts';
 
@@ -179,6 +180,7 @@
 				<div class="flex-1" onclick={() => close(false)}></div>
 			{/if}
 			<div
+				{@attach !sheet && flip}
 				role={sheet ? 'dialog' : undefined}
 				aria-label={sheet ? label : undefined}
 				class={[

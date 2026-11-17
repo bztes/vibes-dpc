@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { dismiss } from '#lib/dismiss.ts';
+	import { flip } from '#lib/flip.ts';
 	import type { Snippet } from 'svelte';
 	import Icon, { type IconName } from '#lib/components/ui/Icon.svelte';
 	import RangeField from '#lib/components/ui/RangeField.svelte';
@@ -82,6 +83,7 @@
 		</button>
 		{#if presetOpen}
 			<div
+				{@attach flip}
 				role="menu"
 				aria-label="Outdoor presets"
 				class="absolute top-full left-0 z-30 mt-1.5 flex w-56 flex-col rounded-xl bg-surface p-1 shadow-float ring-1 ring-line"
