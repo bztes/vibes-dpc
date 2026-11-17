@@ -11,7 +11,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 RUN pnpm install --frozen-lockfile
 COPY . .
 # The build validates the env vars (see src/env.ts) but doesn't inline them: placeholders are enough.
-RUN DATABASE_URL=:memory: ORIGIN=http://localhost BETTER_AUTH_SECRET=build-placeholder pnpm build
+RUN DATABASE_URL=:memory: BETTER_AUTH_SECRET=build-placeholder pnpm build
 
 FROM node:24-bookworm-slim
 WORKDIR /app
