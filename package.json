@@ -19,8 +19,7 @@
 		"db:push": "drizzle-kit push",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
-		"db:studio": "drizzle-kit studio",
-		"auth:schema": "auth generate --config src/lib/server/auth.ts --output src/lib/server/db/auth.schema.ts --yes"
+		"db:studio": "drizzle-kit studio"
 	},
 	"devDependencies": {
 		"@changesets/changelog-github": "^1.0.1",
@@ -35,8 +34,6 @@
 		"@types/better-sqlite3": "^9.6.0",
 		"@types/node": "^24",
 		"@vitest/browser-playwright": "^4.1.8",
-		"auth": "^1.6.24",
-		"better-auth": "^1.6.24",
 		"drizzle-kit": "^0.31.10",
 		"drizzle-orm": "^0.45.2",
 		"eslint": "^10.4.1",
