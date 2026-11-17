@@ -2,7 +2,7 @@ import { createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { error, type Cookies, type RequestEvent } from '@sveltejs/kit';
 import { dev } from '$app/env';
 import { getRequestEvent } from '$app/server';
-import { count, eq, getTableColumns } from 'drizzle-orm';
+import { count, eq, getTableColumns, lt } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.ts';
 import { session, user } from '#lib/server/db/schema.ts';
 import { TokenBucket } from '#lib/server/rate-limit.ts';
@@ -69,6 +69,8 @@ export function createSession(cookies: Cookies, userId: string) {
 	const id = randomBytes(15).toString('base64url');
 	const secret = randomBytes(32).toString('base64url');
 	const expiresAt = new Date(Date.now() + SESSION_LIFETIME);
+	// Sign-ins are rare, so this is a cheap place to drop abandoned sessions
+	db.delete(session).where(lt(session.expiresAt, new Date())).run();
 	db.insert(session)
 		.values({ id, secretHash: hashSecret(secret), userId, expiresAt })
 		.run();
