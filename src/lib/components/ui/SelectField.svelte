@@ -44,15 +44,14 @@
 </script>
 
 <div class={['flex flex-col gap-1', className]}>
-	<label for={id} class={hideLabel ? 'sr-only' : 'text-xs font-medium text-stone-500'}
-		>{label}</label
+	<label for={id} class={hideLabel ? 'sr-only' : 'text-xs font-medium text-fg-muted'}>{label}</label
 	>
 	<div class="relative">
 		<select
 			{id}
 			bind:value
 			onchange={() => onchange?.(value)}
-			class="h-9 w-full cursor-pointer appearance-none truncate rounded-lg border border-stone-300 bg-white pr-8 pl-2.5 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
+			class="h-10 w-full cursor-pointer appearance-none truncate rounded-lg border border-line-strong bg-surface pr-8 pl-3 text-base transition outline-none focus:border-accent focus:ring-4 focus:ring-accent/15 sm:h-9 sm:text-sm"
 		>
 			{#if placeholder}<option value="" disabled>{placeholder}</option>{/if}
 			{#each groups as [group, items] (group)}
@@ -69,7 +68,7 @@
 				{/if}
 			{/each}
 		</select>
-		<span class="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-stone-400">
+		<span class="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-fg-subtle">
 			<Icon name="chevron" size={14} />
 		</span>
 	</div>

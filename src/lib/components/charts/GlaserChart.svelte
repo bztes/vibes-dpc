@@ -19,11 +19,17 @@
 	let { layers, result, number = (index) => index + 1 }: Props = $props();
 
 	const id = $props.id();
-	const W = 720;
-	const H = 380;
+	// Drawn at the rendered pixel size so labels stay legible on small screens
+	let width = $state(720);
+	let height = $state(0);
+	let W = $derived(Math.max(280, Math.round(width)));
+	// Fills the available height; without one it keeps a pleasant aspect ratio
+	let H = $derived(
+		Math.round(height > 0 ? Math.max(200, height) : Math.min(400, Math.max(280, W * 0.53)))
+	);
 	const M = { top: 46, right: 16, bottom: 40, left: 56 };
 	const plotTop = M.top;
-	const plotBottom = H - M.bottom;
+	let plotBottom = $derived(H - M.bottom);
 
 	let axis = $state<'thickness' | 'sd'>('sd');
 
@@ -94,9 +100,11 @@
 	let hovered = $derived(hover === null ? null : result.nodes[hover]);
 </script>
 
-<div class="flex flex-col gap-3">
+<div class="flex h-full min-h-0 flex-col gap-3">
 	<div class="flex flex-wrap items-center justify-between gap-3">
-		<div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+		<div
+			class="flex [scrollbar-width:none] items-center gap-x-4 gap-y-1 whitespace-nowrap max-sm:overflow-x-auto sm:flex-wrap"
+		>
 			<LegendItem label="Saturation pressure" color="var(--color-temp)" />
 			<LegendItem label="Vapour pressure (Glaser)" color="var(--color-dew)" />
 			{#if hasCondensation}
@@ -114,12 +122,12 @@
 	</div>
 
 	{#if result.activeCount === 0}
-		<p class="py-12 text-center text-sm text-stone-500">No effective layers.</p>
+		<p class="py-12 text-center text-sm text-fg-muted">No effective layers.</p>
 	{:else}
-		<div class="relative">
+		<div class="relative min-h-[200px] flex-1" bind:clientWidth={width} bind:clientHeight={height}>
 			<svg
 				viewBox="0 0 {W} {H}"
-				class="h-auto w-full touch-none select-none"
+				class="absolute inset-0 size-full touch-pan-y select-none"
 				role="img"
 				aria-label="Glaser diagram: vapour pressure and saturation pressure across the construction"
 				{onpointermove}
@@ -142,15 +150,15 @@
 						x2={band.x}
 						y1={plotTop}
 						y2={plotBottom}
-						stroke="#fff"
+						stroke="var(--surface)"
 						stroke-width="1.5"
 					/>
-					<circle cx={markers[i].cx} cy={markers[i].cy} r="8.5" fill="#292524" />
+					<circle cx={markers[i].cx} cy={markers[i].cy} r="8.5" fill="var(--chart-ink)" />
 					<text
 						x={markers[i].cx}
 						y={markers[i].cy + 3.5}
 						text-anchor="middle"
-						class="fill-white text-[10px] font-semibold"
+						class="fill-surface text-[10px] font-semibold"
 					>
 						{number(i)}
 					</text>
@@ -162,7 +170,7 @@
 						x2={W - M.right}
 						y1={y(tick)}
 						y2={y(tick)}
-						stroke="#1c1917"
+						stroke="var(--chart-ink)"
 						stroke-opacity="0.12"
 						stroke-width="0.75"
 					/>
@@ -170,27 +178,33 @@
 						x={M.left - 6}
 						y={y(tick) + 3.5}
 						text-anchor="end"
-						class="fill-stone-500 text-[10px] tabular-nums"
+						class="fill-chart-muted text-[10px] tabular-nums"
 					>
 						{fmt(tick, 0)}
 					</text>
 				{/each}
-				<line x1={M.left} x2={W - M.right} y1={plotBottom} y2={plotBottom} stroke="#a8a29e" />
-				<text x={M.left - 6} y={plotTop - 30} text-anchor="end" class="fill-stone-500 text-[10px]"
+				<line
+					x1={M.left}
+					x2={W - M.right}
+					y1={plotBottom}
+					y2={plotBottom}
+					stroke="var(--chart-muted)"
+				/>
+				<text x={M.left - 6} y={plotTop - 30} text-anchor="end" class="fill-chart-muted text-[10px]"
 					>Pa</text
 				>
-				<text x={M.left} y={plotBottom + 18} class="fill-stone-500 text-[10px]">inside</text>
+				<text x={M.left} y={plotBottom + 18} class="fill-chart-muted text-[10px]">inside</text>
 				<text
 					x={W - M.right}
 					y={plotBottom + 18}
 					text-anchor="end"
-					class="fill-stone-500 text-[10px]">outside</text
+					class="fill-chart-muted text-[10px]">outside</text
 				>
 				<text
 					x={(M.left + W - M.right) / 2}
 					y={plotBottom + 18}
 					text-anchor="middle"
-					class="fill-stone-500 text-[10px]"
+					class="fill-chart-muted text-[10px]"
 				>
 					{axis === 'sd'
 						? `total sd ${fmtSd(result.sdTotal)} m`
@@ -234,7 +248,14 @@
 
 				{#each condensationZones as zone, i (i)}
 					{#each [zone.points[0], zone.points[zone.points.length - 1]] as [cx, cy], j (j)}
-						<circle {cx} {cy} r="5" fill="var(--color-critical)" stroke="#fff" stroke-width="2" />
+						<circle
+							{cx}
+							{cy}
+							r="5"
+							fill="var(--color-critical)"
+							stroke="var(--surface)"
+							stroke-width="2"
+						/>
 					{/each}
 				{/each}
 
@@ -244,7 +265,7 @@
 						x2={nodePx[hover]}
 						y1={plotTop}
 						y2={plotBottom}
-						stroke="#1c1917"
+						stroke="var(--chart-ink)"
 						stroke-width="1"
 					/>
 					<circle
@@ -252,7 +273,7 @@
 						cy={y(hovered.ps)}
 						r="4.5"
 						fill="var(--color-temp)"
-						stroke="#fff"
+						stroke="var(--surface)"
 						stroke-width="2"
 					/>
 					<circle
@@ -260,7 +281,7 @@
 						cy={y(hovered.pv)}
 						r="4.5"
 						fill="var(--color-dew)"
-						stroke="#fff"
+						stroke="var(--surface)"
 						stroke-width="2"
 					/>
 				{/if}
@@ -269,23 +290,23 @@
 			{#if hovered && hover !== null}
 				<ChartTooltip x={(nodePx[hover] / W) * 100} title={layers[hovered.layer]?.name}>
 					<div class="flex justify-between gap-4">
-						<span>sd from inside</span><span class="text-stone-900 tabular-nums"
+						<span>sd from inside</span><span class="text-fg tabular-nums"
 							>{fmtSd(hovered.sd)} m</span
 						>
 					</div>
 					<div class="flex justify-between gap-4">
-						<span>Saturation p<sub>s</sub></span><span class="text-stone-900 tabular-nums"
+						<span>Saturation p<sub>s</sub></span><span class="text-fg tabular-nums"
 							>{fmt(hovered.ps, 0)} Pa</span
 						>
 					</div>
 					<div class="flex justify-between gap-4">
-						<span>Vapour pressure p</span><span class="text-stone-900 tabular-nums"
+						<span>Vapour pressure p</span><span class="text-fg tabular-nums"
 							>{fmt(hovered.pv, 0)} Pa</span
 						>
 					</div>
 					<div class="flex justify-between gap-4">
 						<span>Rel. humidity</span>
-						<span class="text-stone-900 tabular-nums"
+						<span class="text-fg tabular-nums"
 							>{fmt(Math.min(100, (hovered.pv / hovered.ps) * 100), 0)} %</span
 						>
 					</div>

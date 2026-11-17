@@ -63,8 +63,7 @@
 </script>
 
 <div class={['flex flex-col gap-1', className]}>
-	<label for={id} class={hideLabel ? 'sr-only' : 'text-xs font-medium text-stone-500'}
-		>{label}</label
+	<label for={id} class={hideLabel ? 'sr-only' : 'text-xs font-medium text-fg-muted'}>{label}</label
 	>
 	<!-- Clicking the empty space next to the chips focuses the input -->
 	<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
@@ -72,20 +71,20 @@
 		class={[
 			'flex min-h-9 cursor-text flex-wrap items-center gap-1.5 rounded-lg text-sm transition',
 			variant === 'field' &&
-				'border border-stone-300 bg-white px-2 py-1.5 focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/20',
+				'border border-line-strong bg-surface px-2 py-1.5 focus-within:border-accent focus-within:ring-4 focus-within:ring-accent/15',
 			variant === 'subtle' &&
-				'-mx-1.5 px-1.5 py-1 focus-within:bg-white focus-within:ring-2 focus-within:ring-sky-500/30 hover:bg-stone-100/70'
+				'-mx-1.5 px-1.5 py-1 focus-within:bg-surface focus-within:ring-2 focus-within:ring-accent/30 hover:bg-surface-3/60'
 		]}
 		onclick={(event) => event.target === event.currentTarget && input?.focus()}
 	>
 		{#each tags as tag, i (tag)}
 			<span
-				class="inline-flex items-center gap-0.5 rounded-full bg-sky-50 py-0.5 pr-0.5 pl-2.5 text-xs font-medium text-sky-800 ring-1 ring-sky-200"
+				class="inline-flex items-center gap-0.5 rounded-md bg-accent/12 py-0.5 pr-0.5 pl-2 text-xs font-medium text-accent"
 			>
 				{tag}
 				<button
 					type="button"
-					class="grid size-4 place-items-center rounded-full text-sky-600 hover:bg-sky-200 hover:text-sky-900"
+					class="grid size-4 place-items-center rounded text-accent hover:bg-accent/20"
 					aria-label="Remove tag {tag}"
 					onclick={() => remove(i)}
 				>
@@ -108,7 +107,7 @@
 					add(text + pasted);
 				}}
 				placeholder={tags.length ? '' : placeholder}
-				class="h-6 min-w-24 flex-1 bg-transparent text-sm outline-none placeholder:text-stone-400"
+				class="h-7 min-w-24 flex-1 bg-transparent text-base outline-none placeholder:text-fg-subtle sm:h-6 sm:text-sm"
 			/>
 		{/if}
 	</div>

@@ -21,7 +21,7 @@
 <div class="overflow-x-auto">
 	<table class="w-full text-sm tabular-nums">
 		<thead>
-			<tr class="border-b border-stone-200 text-left text-xs text-stone-500">
+			<tr class="sticky top-0 border-b border-line bg-surface text-left text-xs text-fg-muted">
 				<th class="py-2 pr-3 font-medium">Boundary</th>
 				<th class="py-2 pr-3 text-right font-medium">x [mm]</th>
 				<th class="py-2 pr-3 text-right font-medium">sd [m]</th>
@@ -34,7 +34,7 @@
 		</thead>
 		<tbody>
 			{#each rows as row, i (i)}
-				<tr class={['border-b border-stone-100', row.rh >= 99.9 && 'bg-red-50 text-critical-ink']}>
+				<tr class={['border-b border-line', row.rh >= 99.9 && 'bg-critical/10 text-critical-ink']}>
 					<td class="py-1.5 pr-3 whitespace-nowrap">{row.label}</td>
 					<td class="py-1.5 pr-3 text-right">{fmt(row.node.x, 1)}</td>
 					<td class="py-1.5 pr-3 text-right">{fmtSd(row.node.sd)}</td>

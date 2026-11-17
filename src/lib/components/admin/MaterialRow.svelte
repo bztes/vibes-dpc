@@ -68,7 +68,7 @@
 </script>
 
 <form
-	class="grid grid-cols-2 items-end gap-2 border-b border-stone-100 py-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_6.5rem_7rem_6.5rem_auto_auto]"
+	class="grid grid-cols-2 items-end gap-2 border-b border-line py-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_6.5rem_7rem_6.5rem_auto_auto]"
 	onsubmit={(event) => {
 		event.preventDefault();
 		save();
@@ -84,8 +84,8 @@
 	<NumberField label="λ [W/mK]" min={0.001} bind:value={draft.lambda} />
 	<NumberField label="μ [–]" min={0} bind:value={draft.mu} />
 	<NumberField label="Default [mm]" min={0.01} bind:value={draft.thickness} />
-	<label class="flex h-9 items-center gap-2 text-sm text-stone-600">
-		<input type="checkbox" bind:checked={draft.ventilated} class="size-4 accent-stone-800" />
+	<label class="flex h-9 items-center gap-2 text-sm text-fg-muted">
+		<input type="checkbox" bind:checked={draft.ventilated} class="size-4 accent-(--accent)" />
 		Ventilated
 	</label>
 	<div class="col-span-2 flex justify-end gap-1 md:col-span-1">

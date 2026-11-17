@@ -13,7 +13,10 @@
 	let total = $derived(layers.reduce((sum, layer) => sum + layer.thickness, 0));
 </script>
 
-<div class={['flex h-3 overflow-hidden rounded-full bg-stone-100', className]} aria-hidden="true">
+<div
+	class={['flex h-2 gap-px overflow-hidden rounded-full bg-surface-3', className]}
+	aria-hidden="true"
+>
 	{#each layers as layer, i (i)}
 		<span
 			style:background={categoryStyles[layer.category].fill}

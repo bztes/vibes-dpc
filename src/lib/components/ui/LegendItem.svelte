@@ -8,7 +8,7 @@
 	let { label, color, kind = 'line' }: Props = $props();
 </script>
 
-<span class="inline-flex items-center gap-1.5 text-xs text-stone-600">
+<span class="inline-flex items-center gap-1.5 text-xs text-fg-muted">
 	<svg width="18" height="10" aria-hidden="true">
 		{#if kind === 'line'}
 			<line x1="1" x2="17" y1="5" y2="5" stroke={color} stroke-width="2" stroke-linecap="round" />

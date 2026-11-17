@@ -28,19 +28,11 @@
 	<link rel="icon" href={favicon} type="image/svg+xml" />
 	<link rel="apple-touch-icon" href={asset('apple-touch-icon.png')} />
 	<link rel="manifest" href={asset('manifest.webmanifest')} />
-	<meta name="theme-color" content="#2a78d6" />
+	<meta name="theme-color" content="#f4f4f2" media="(prefers-color-scheme: light)" />
+	<meta name="theme-color" content="#0c0d10" media="(prefers-color-scheme: dark)" />
 </svelte:head>
 
 {@render children()}
-
-<footer class="mx-auto max-w-7xl px-4 pt-2 pb-8 text-xs text-stone-500 sm:px-6">
-	<p>
-		<strong class="font-medium text-stone-600">Disclaimer:</strong> This calculator gives a simplified
-		steady-state estimate for orientation only. It is no substitute for a professional assessment or a
-		hygrothermal simulation, and no liability is accepted for decisions based on its results. It was vibe
-		coded – largely written by an AI – so the code and results may contain errors.
-	</p>
-</footer>
 
 <div style="display:none">
 	{#each locales as locale (locale)}

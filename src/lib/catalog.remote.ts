@@ -40,10 +40,15 @@ export const getCatalog = query((): Catalog => {
 	};
 });
 
+/** The signed-in user as shown in the UI */
+export type ClientUser = { name: string; email: string; admin: boolean };
+
 /** The signed-in user, if any */
 export const getUser = query(() => {
 	const { user } = getRequestEvent().locals;
-	return user ? { name: user.name, email: user.email, admin: isAdmin(user) } : null;
+	return user
+		? ({ name: user.name, email: user.email, admin: isAdmin(user) } satisfies ClientUser)
+		: null;
 });
 
 const name = v.pipe(v.string(), v.trim(), v.minLength(1, 'Name is required'), v.maxLength(120));

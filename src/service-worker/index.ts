@@ -17,7 +17,7 @@ const ASSETS = [...immutable, ...assets].map((asset) => pathname(asset.path));
 const START = pathname('');
 
 /** Pages cached on install so that the calculator opens offline */
-const PAGES = [START, pathname('calculator')];
+const PAGES = [START];
 
 /** Paths that must not be cached: sign-in and admin data are only useful online */
 const isPrivate = (pathname: string) => /^\/(?:[a-z]{2}\/)?(?:api|admin)(?:\/|$)/.test(pathname);

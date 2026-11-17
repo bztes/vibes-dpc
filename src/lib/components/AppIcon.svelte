@@ -5,4 +5,4 @@
 	let { class: className }: { class?: string } = $props();
 </script>
 
-<img src={icon} alt="" class={['shrink-0 rounded-[22%] shadow-sm shadow-sky-700/20', className]} />
+<img src={icon} alt="" class={['shrink-0 rounded-[24%] shadow-sm shadow-black/20', className]} />

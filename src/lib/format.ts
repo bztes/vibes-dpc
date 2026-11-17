@@ -18,3 +18,12 @@ export function fmt(value: number, digits = 1): string {
 export function fmtSd(sd: number): string {
 	return sd >= 10 ? fmt(sd, 0) : sd >= 1 ? fmt(sd, 1) : fmt(sd, 2);
 }
+
+/** Case-insensitive search: the returned test passes if the text contains every word of `query` */
+export function searchMatcher(query: string): (text: string) => boolean {
+	const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+	return (text) => {
+		const lower = text.toLowerCase();
+		return terms.every((term) => lower.includes(term));
+	};
+}

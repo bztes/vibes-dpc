@@ -5,7 +5,7 @@
 
 	interface Props extends HTMLButtonAttributes {
 		/** `danger` is subtle, `critical` is for confirming destructive actions */
-		variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'critical';
+		variant?: 'primary' | 'accent' | 'secondary' | 'ghost' | 'danger' | 'critical';
 		size?: 'sm' | 'md';
 		icon?: IconName;
 		/** Icon-only button: text used as aria-label */
@@ -30,16 +30,18 @@
 	aria-label={label}
 	title={label}
 	class={[
-		'inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition-colors',
-		'focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-1 focus-visible:outline-none',
+		'inline-flex shrink-0 items-center justify-center gap-1.5 font-medium whitespace-nowrap transition select-none active:scale-[0.97]',
+		'focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none',
 		'disabled:pointer-events-none disabled:opacity-40',
-		size === 'sm' ? 'h-7 text-xs' : 'h-9 text-sm',
-		children ? (size === 'sm' ? 'px-2.5' : 'px-3.5') : size === 'sm' ? 'w-7' : 'w-9',
-		variant === 'primary' && 'bg-stone-900 text-white hover:bg-stone-700',
-		variant === 'secondary' && 'border border-stone-300 bg-white text-stone-800 hover:bg-stone-50',
-		variant === 'ghost' && 'text-stone-600 hover:bg-stone-100 hover:text-stone-900',
-		variant === 'danger' && 'text-stone-500 hover:bg-red-50 hover:text-critical-ink',
-		variant === 'critical' && 'bg-critical text-white hover:bg-critical-ink',
+		// Larger touch targets on small screens
+		size === 'sm' ? 'h-8 rounded-md text-xs sm:h-7' : 'h-10 rounded-lg text-sm sm:h-9',
+		children ? (size === 'sm' ? 'px-2.5' : 'px-3.5') : size === 'sm' ? 'w-8 sm:w-7' : 'w-10 sm:w-9',
+		variant === 'primary' && 'bg-inverse text-inverse-fg hover:opacity-90',
+		variant === 'accent' && 'bg-accent text-white shadow-sm shadow-accent/30 hover:brightness-110',
+		variant === 'secondary' && 'bg-surface text-fg ring-1 ring-line-strong hover:bg-surface-2',
+		variant === 'ghost' && 'text-fg-muted hover:bg-surface-3 hover:text-fg',
+		variant === 'danger' && 'text-fg-muted hover:bg-critical/10 hover:text-critical-ink',
+		variant === 'critical' && 'bg-critical text-white hover:brightness-110',
 		className
 	]}
 	{...rest}

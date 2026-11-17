@@ -25,22 +25,22 @@
 		step = 1,
 		digits = 0,
 		icon,
-		accent = '#1c1917',
+		accent = 'var(--fg)',
 		disabled = false
 	}: Props = $props();
 
 	const id = $props.id();
 </script>
 
-<div class="flex flex-col gap-1.5">
+<div class="flex flex-col">
 	<div class="flex items-center justify-between gap-2">
-		<label for={id} class="flex items-center gap-1.5 text-sm font-medium text-stone-700">
-			{#if icon}<span class="text-stone-400"><Icon name={icon} size={14} /></span>{/if}
+		<label for={id} class="flex items-center gap-1.5 text-xs font-medium text-fg-muted">
+			{#if icon}<Icon name={icon} size={13} class="text-fg-subtle" />{/if}
 			{label}
 		</label>
-		<span class="text-sm font-semibold text-stone-900 tabular-nums"
-			>{fmt(value, digits)} {unit}</span
-		>
+		<span class="text-sm font-semibold tabular-nums">
+			{fmt(value, digits)}<span class="ml-0.5 text-xs font-normal text-fg-muted">{unit}</span>
+		</span>
 	</div>
 	<input
 		{id}
@@ -50,11 +50,9 @@
 		{max}
 		{step}
 		{disabled}
-		style:accent-color={accent}
-		class="h-1.5 w-full cursor-pointer disabled:cursor-default disabled:opacity-50"
+		title="{fmt(min, 0)} – {fmt(max, 0)} {unit}"
+		style:--range-accent={accent}
+		style:--range-fill="{((value - min) / (max - min)) * 100}%"
+		class="range w-full touch-pan-y disabled:cursor-default disabled:opacity-40"
 	/>
-	<div class="flex justify-between text-[11px] text-stone-400 tabular-nums">
-		<span>{fmt(min, 0)} {unit}</span>
-		<span>{fmt(max, 0)} {unit}</span>
-	</div>
 </div>

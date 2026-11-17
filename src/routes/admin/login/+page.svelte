@@ -13,7 +13,7 @@
 
 <AppHeader user={null} />
 
-<main class="mx-auto max-w-md px-4 py-12">
+<main class="mx-auto max-w-md px-3 py-8 sm:py-16">
 	{#if data.firstRun}
 		<Card
 			title="Create admin account"

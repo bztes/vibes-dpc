@@ -5,7 +5,7 @@
 	import MaterialPicker from '#lib/components/MaterialPicker.svelte';
 	import NumberField from '#lib/components/ui/NumberField.svelte';
 	import TextField from '#lib/components/ui/TextField.svelte';
-	import { categoryStyles } from '#lib/layer-style.ts';
+	import { categoryStyles, inkOn } from '#lib/layer-style.ts';
 	import { fmt, fmtSd } from '#lib/format.ts';
 	import { getWall } from '#lib/wall.svelte.ts';
 
@@ -51,19 +51,43 @@
 	}
 </script>
 
-<div class="flex flex-col gap-2">
-	<div
-		class="flex items-center justify-between px-1 text-[11px] font-semibold tracking-wide text-stone-400 uppercase"
-	>
-		<span>Inside (warm)</span>
-		<span>{wall.layers.length} layers · {fmt(wall.result.totalThickness, 0)} mm</span>
-	</div>
+<!-- Small plus on the border between two layers; inserts before `index` -->
+{#snippet inserter(index: number, edge: 'top' | 'bottom')}
+	{#if dragIndex === undefined}
+		<div
+			class={[
+				'group/gap absolute inset-x-0 z-10 flex h-5 items-center has-aria-expanded:z-40',
+				edge === 'top' ? '-top-2.5' : '-bottom-2.5'
+			]}
+		>
+			<span
+				class="pointer-events-none absolute inset-x-3 top-1/2 h-px bg-accent opacity-0 transition group-focus-within/gap:opacity-100 group-hover/gap:opacity-100"
+			></span>
+			<div class="relative flex-1">
+				<MaterialPicker
+					label="Add layer"
+					variant="insert"
+					materials={wall.materials}
+					placeholder={index === 0
+						? 'Add layer on the inside'
+						: index === wall.layers.length
+							? 'Add layer on the outside'
+							: `Add layer between ${index} and ${index + 1}`}
+					onselect={(id) => wall.addLayer(id, index)}
+				/>
+			</div>
+		</div>
+	{/if}
+{/snippet}
 
-	<ol class="flex flex-col gap-2">
+<div class="flex flex-col py-8">
+	<ol class="flex flex-col border-y border-line">
 		{#each wall.layers as layer, i (layer.id)}
 			{@const style = categoryStyles[layer.category]}
 			{@const activeIndex = wall.activeLayers.indexOf(layer)}
 			{@const inactive = activeIndex < 0 || activeIndex >= wall.result.activeCount}
+			{@const open = !!expanded[layer.id]}
+			{@const materialName = wall.materials.find((m) => m.id === layer.material)?.name}
 			<li
 				ondragover={(event) => dragOver(event, i)}
 				ondrop={(event) => {
@@ -71,25 +95,33 @@
 					drop();
 				}}
 				class={[
-					'relative rounded-xl border border-stone-200 bg-white p-3 transition-opacity',
-					layer.disabled ? 'opacity-50' : inactive && !layer.ventilated && 'opacity-60',
+					'group relative border-b border-line transition-colors last:border-b-0',
+					open ? 'bg-surface-2' : 'hover:bg-surface-2/70',
 					dragIndex === i && 'opacity-40'
 				]}
-				style:border-left="6px solid {style.fill}"
 			>
+				{@render inserter(i, 'top')}
+				{#if i === wall.layers.length - 1}{@render inserter(i + 1, 'bottom')}{/if}
+
 				{#if showGap && dropGap === i}
-					<span class="absolute inset-x-0 -top-1.5 h-0.5 rounded bg-sky-500"></span>
+					<span class="absolute inset-x-2 -top-1 h-0.5 rounded bg-accent"></span>
 				{:else if showGap && dropGap === i + 1 && i === wall.layers.length - 1}
-					<span class="absolute inset-x-0 -bottom-1.5 h-0.5 rounded bg-sky-500"></span>
+					<span class="absolute inset-x-2 -bottom-1 h-0.5 rounded bg-accent"></span>
 				{/if}
-				<div class="flex items-center gap-2">
-					<!-- Drag to reorder, or focus and use the arrow keys -->
+
+				<div
+					class={[
+						'flex items-center gap-2 py-2 pr-2 pl-3 lg:pl-4',
+						layer.disabled ? 'opacity-45' : inactive && !layer.ventilated && 'opacity-60'
+					]}
+				>
+					<!-- Drag to reorder, or focus and use the arrow keys; touch screens use the move buttons -->
 					<button
 						type="button"
 						title="Drag to reorder"
 						aria-label="Move layer {i + 1} (arrow keys)"
 						draggable="true"
-						class="-ml-1 cursor-grab rounded text-stone-400 hover:text-stone-700 focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:outline-none active:cursor-grabbing"
+						class="-mr-1 hidden h-8 cursor-grab items-center rounded text-fg-subtle opacity-0 transition group-hover:opacity-100 hover:text-fg focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none active:cursor-grabbing pointer-fine:flex"
 						onkeydown={(event) => {
 							const direction = { ArrowUp: -1, ArrowDown: 1 }[event.key] as -1 | 1 | undefined;
 							if (!direction) return;
@@ -105,127 +137,143 @@
 						}}
 						ondragend={endDrag}
 					>
-						<Icon name="grip" size={16} />
+						<Icon name="grip" size={14} />
 					</button>
-					<span
-						class={[
-							'grid size-6 shrink-0 place-items-center rounded-full text-[11px] font-semibold',
-							inactive ? 'bg-stone-200 text-stone-600' : 'bg-stone-800 text-white'
-						]}
-					>
-						{i + 1}
-					</span>
-					<span
-						class={[
-							'min-w-0 flex-1 truncate text-sm font-medium text-stone-800',
-							layer.disabled && 'line-through'
-						]}
-						title={layer.name}
-					>
-						{layer.name}
-					</span>
-					{#if layer.disabled}
-						<Badge>deactivated</Badge>
-					{:else if layer.ventilated}
-						<Badge tone="info" icon="wind">ventilated</Badge>
-					{:else if inactive}
-						<Badge>not effective</Badge>
-					{/if}
-					<div class="flex shrink-0 items-center">
-						<input
-							type="checkbox"
-							role="switch"
-							title={layer.disabled ? 'Activate layer' : 'Deactivate layer'}
-							aria-label="Layer {i + 1} active"
-							checked={!layer.disabled}
-							onchange={() => wall.toggleLayer(i)}
-							class="mx-1.5 size-4 accent-stone-800"
-						/>
-						<Button
-							variant="ghost"
-							size="sm"
-							icon="copy"
-							label="Duplicate layer"
-							onclick={() => wall.duplicateLayer(i)}
-						/>
-						<Button
-							variant="ghost"
-							size="sm"
-							icon="sliders"
-							label="Edit material values"
-							aria-expanded={!!expanded[layer.id]}
-							onclick={() => (expanded[layer.id] = !expanded[layer.id])}
-						/>
-						<Button
-							variant="danger"
-							size="sm"
-							icon="trash"
-							label="Remove layer"
-							onclick={() => wall.removeLayer(i)}
-						/>
-					</div>
-				</div>
 
-				<div class="mt-2.5 grid grid-cols-[minmax(0,1fr)_7.5rem] gap-2">
-					<MaterialPicker
-						label="Material"
-						materials={wall.materials}
-						value={layer.material}
-						placeholder="Custom material"
-						onselect={(id) => wall.replaceMaterial(i, id)}
-					/>
+					<button
+						type="button"
+						aria-expanded={open}
+						aria-label="Layer {i + 1}: {layer.name} – {open ? 'collapse' : 'edit'}"
+						onclick={() => (expanded[layer.id] = !open)}
+						class="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg py-0.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-accent"
+					>
+						<span
+							class="grid size-7 shrink-0 place-items-center rounded-md text-[11px] font-bold tabular-nums ring-1 ring-black/10 ring-inset"
+							style:background={style.fill}
+							style:color={inkOn(style.fill)}
+						>
+							{i + 1}
+						</span>
+						<span class="min-w-0 flex-1">
+							<span
+								class={[
+									'block truncate text-[13px] leading-tight font-medium',
+									layer.disabled && 'line-through'
+								]}
+							>
+								{layer.name}
+							</span>
+							<span class="flex items-center gap-1.5 text-[11px] leading-tight text-fg-subtle">
+								{#if layer.disabled}
+									<Badge>off</Badge>
+								{:else if layer.ventilated}
+									<Badge tone="info" icon="wind">ventilated</Badge>
+								{:else if inactive}
+									<Badge>not effective</Badge>
+								{/if}
+								<span class="truncate">{materialName ?? 'Custom material'}</span>
+							</span>
+						</span>
+					</button>
+
 					<NumberField
-						label="Thickness"
+						label="Thickness of layer {i + 1}"
 						hideLabel
+						compact
 						unit="mm"
 						min={0.01}
 						max={5000}
+						class="w-[5.25rem] shrink-0"
 						bind:value={layer.thickness}
 					/>
+
+					<button
+						type="button"
+						title={layer.disabled ? 'Activate layer' : 'Deactivate layer'}
+						aria-label="Layer {i + 1} active"
+						aria-pressed={!layer.disabled}
+						onclick={() => wall.toggleLayer(i)}
+						class="grid size-8 shrink-0 place-items-center rounded-lg text-fg-subtle transition hover:bg-surface-3 hover:text-fg focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
+					>
+						<Icon name={layer.disabled ? 'eyeOff' : 'eye'} size={15} />
+					</button>
 				</div>
 
-				{#if expanded[layer.id]}
-					<div class="mt-3 grid grid-cols-2 gap-2 rounded-lg bg-stone-50 p-3">
-						<TextField label="Name" class="col-span-2" bind:value={layer.name} />
-						<NumberField
-							label="λ conductivity"
-							unit="W/mK"
-							min={0.001}
-							bind:value={() => layer.lambda, (v) => customize(i, 'lambda', v)}
+				{#if open}
+					<div class="flex flex-col gap-3 px-3 pt-1 pb-3 lg:px-4">
+						<MaterialPicker
+							label="Material"
+							materials={wall.materials}
+							value={layer.material}
+							placeholder="Custom material"
+							onselect={(id) => wall.replaceMaterial(i, id)}
 						/>
-						<NumberField
-							label="μ diffusion resistance"
-							min={0}
-							bind:value={() => layer.mu, (v) => customize(i, 'mu', v)}
-						/>
-						<p class="col-span-2 text-xs text-stone-500">
+						<TextField label="Name" bind:value={layer.name} />
+						<div class="grid grid-cols-2 gap-2">
+							<NumberField
+								label="λ conductivity"
+								unit="W/mK"
+								min={0.001}
+								bind:value={() => layer.lambda, (v) => customize(i, 'lambda', v)}
+							/>
+							<NumberField
+								label="μ diffusion resist."
+								min={0}
+								bind:value={() => layer.mu, (v) => customize(i, 'mu', v)}
+							/>
+						</div>
+						<p class="text-[11px] text-fg-subtle tabular-nums">
 							sd = {fmtSd((layer.mu * layer.thickness) / 1000)} m · R = {fmt(
 								layer.thickness / 1000 / layer.lambda,
 								3
 							)} m²K/W
 							{#if layer.ventilated}· this and all outer layers are ignored{/if}
 						</p>
+						<div class="flex flex-wrap items-center gap-1">
+							<Button
+								size="sm"
+								variant="ghost"
+								icon="up"
+								label="Move layer up"
+								disabled={i === 0}
+								onclick={() => wall.moveLayer(i, -1)}
+							/>
+							<Button
+								size="sm"
+								variant="ghost"
+								icon="down"
+								label="Move layer down"
+								disabled={i === wall.layers.length - 1}
+								onclick={() => wall.moveLayer(i, 1)}
+							/>
+							<Button size="sm" variant="ghost" icon="copy" onclick={() => wall.duplicateLayer(i)}
+								>Duplicate</Button
+							>
+							<Button
+								size="sm"
+								variant="danger"
+								icon="trash"
+								class="ml-auto"
+								onclick={() => wall.removeLayer(i)}>Remove</Button
+							>
+						</div>
 					</div>
 				{/if}
 			</li>
 		{:else}
-			<li
-				class="rounded-xl border border-dashed border-stone-300 p-6 text-center text-sm text-stone-500"
-			>
-				No layers yet – add a material below.
+			<li class="flex flex-col items-center gap-3 px-4 py-8 text-center text-sm text-fg-muted">
+				<Icon name="layers" size={20} class="text-fg-subtle" />
+				No layers yet – add the innermost material first.
+				<div class="w-full">
+					<MaterialPicker
+						label="Add layer"
+						variant="add"
+						materials={wall.materials}
+						placeholder="Add first layer"
+						onselect={(id) => wall.addLayer(id)}
+					/>
+				</div>
 			</li>
 		{/each}
 	</ol>
-
-	<div class="px-1 text-[11px] font-semibold tracking-wide text-stone-400 uppercase">
-		Outside (cold)
-	</div>
-
-	<MaterialPicker
-		label="Add layer"
-		variant="add"
-		materials={wall.materials}
-		placeholder="Add layer on the outside"
-		onselect={(id) => wall.addLayer(id)}
-	/>
 </div>

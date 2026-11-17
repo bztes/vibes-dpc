@@ -1,26 +1,34 @@
+<!--
+	Full-screen workbench. Large screens: layers | live canvas | climate & result.
+	Small screens: the canvas on top and a bottom sheet with tabs below it.
+	The sheet uses `display: contents` on large screens, so its panels become grid columns.
+-->
 <script lang="ts">
-	import { onMount, untrack } from 'svelte';
-	import BoundaryTable from '#lib/components/BoundaryTable.svelte';
+	import type { ClientUser } from '#lib/catalog.remote.ts';
+	import { onMount, untrack, type Snippet } from 'svelte';
+	import { cacheForOffline } from '#lib/offline.ts';
+	import { fmt } from '#lib/format.ts';
+	import AboutDialog from '#lib/components/AboutDialog.svelte';
+	import BuildUpDetails from '#lib/components/BuildUpDetails.svelte';
+	import ChartCanvas from '#lib/components/ChartCanvas.svelte';
 	import ClimatePanel from '#lib/components/ClimatePanel.svelte';
 	import LayerEditor from '#lib/components/LayerEditor.svelte';
+	import Library from '#lib/components/Library.svelte';
 	import ResultSummary from '#lib/components/ResultSummary.svelte';
-	import TemplateBar from '#lib/components/TemplateBar.svelte';
-	import GlaserChart from '#lib/components/charts/GlaserChart.svelte';
-	import RiskChart from '#lib/components/charts/RiskChart.svelte';
-	import WallSection from '#lib/components/charts/WallSection.svelte';
-	import Button from '#lib/components/ui/Button.svelte';
-	import Card from '#lib/components/ui/Card.svelte';
+	import WorkbenchHeader from '#lib/components/WorkbenchHeader.svelte';
+	import Icon, { type IconName } from '#lib/components/ui/Icon.svelte';
 	import type { Catalog } from '#lib/physics/types.ts';
-	import { WallModel, setWall } from '#lib/wall.svelte.ts';
+	import { verdictStyles } from '#lib/verdict.ts';
+	import { WallModel, setWall, templatePath } from '#lib/wall.svelte.ts';
 
 	interface Props {
 		catalog: Catalog;
-		admin: boolean;
+		user: ClientUser | null;
 		/** Template or saved build-up to show; without it the build-up starts empty */
 		templateId?: string;
 	}
 
-	let { catalog, admin, templateId }: Props = $props();
+	let { catalog, user, templateId }: Props = $props();
 
 	const wall = setWall(
 		new WallModel(
@@ -30,7 +38,11 @@
 	);
 
 	// Browser storage is only available after hydration
-	onMount(() => wall.restore(templateId));
+	onMount(() => {
+		wall.restore(templateId);
+		// Every build-up can then be opened offline
+		void cacheForOffline(wall.templates.map(templatePath));
+	});
 
 	// Follow navigation between build-ups; saving one updates the URL but is already shown
 	$effect(() => {
@@ -41,109 +53,233 @@
 			else wall.clear();
 		});
 	});
+
+	type Tab = 'layers' | 'climate' | 'result';
+	const tabs: { value: Tab; label: string; icon: IconName }[] = [
+		{ value: 'layers', label: 'Layers', icon: 'layers' },
+		{ value: 'climate', label: 'Climate', icon: 'thermometer' },
+		{ value: 'result', label: 'Result', icon: 'gauge' }
+	];
+	let tab = $state<Tab>('layers');
+	/** Small screens: the sheet covers the canvas */
+	let sheetOpen = $state(false);
+
+	let about = $state<AboutDialog>();
+	let library = $state<Library>();
+	let verdict = $derived(wall.verdict);
+
+	/** Large screens: sidebar sections folded down to their summary */
+	let collapsed = $state({ details: false, result: false, climate: false });
+
+	// Drag the sheet handle up or down; a tap toggles it
+	let dragStart: number | undefined;
+	function onpointerdown(event: PointerEvent) {
+		dragStart = event.clientY;
+		(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+	}
+	function onpointerup(event: PointerEvent) {
+		if (dragStart === undefined) return;
+		const dy = event.clientY - dragStart;
+		dragStart = undefined;
+		if (Math.abs(dy) < 8) sheetOpen = !sheetOpen;
+		else sheetOpen = dy < 0;
+	}
+
+	function show(next: Tab) {
+		tab = next;
+		if (next === 'layers' && !wall.layers.length) sheetOpen = true;
+	}
 </script>
 
-<main class="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6">
-	<TemplateBar {admin} />
+{#snippet panelHead(icon: IconName, title: string, extra?: Snippet)}
+	<div
+		class="sticky top-0 z-10 flex h-11 shrink-0 items-center gap-2 border-b border-line bg-surface-2 px-4 text-[13px] font-semibold max-lg:hidden"
+	>
+		<Icon name={icon} size={15} class="text-fg-subtle" />
+		{title}
+		<span class="flex-1"></span>
+		{@render extra?.()}
+	</div>
+{/snippet}
 
-	<div class="grid gap-6 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
-		<div class="flex flex-col gap-6">
-			<Card title="Climate" icon="thermometer">
-				<ClimatePanel />
-			</Card>
+{#snippet collapsibleHead(
+	icon: IconName,
+	title: string,
+	key: keyof typeof collapsed,
+	summary: Snippet
+)}
+	<button
+		type="button"
+		aria-expanded={!collapsed[key]}
+		onclick={() => (collapsed[key] = !collapsed[key])}
+		class="sticky top-0 z-10 flex h-11 w-full shrink-0 items-center gap-2 border-b border-line bg-surface-2 px-4 text-left text-[13px] font-semibold hover:bg-surface-3 max-lg:hidden [section+section>&]:border-t"
+	>
+		<Icon name={icon} size={15} class="text-fg-subtle" />
+		{title}
+		<span
+			class="min-w-0 flex-1 truncate text-right text-xs font-normal text-fg-subtle tabular-nums"
+		>
+			{#if collapsed[key]}{@render summary()}{/if}
+		</span>
+		<Icon
+			name="chevron"
+			size={14}
+			class={['shrink-0 text-fg-subtle transition-transform', collapsed[key] && '-rotate-90']}
+		/>
+	</button>
+{/snippet}
 
-			<Card title="Build-up" subtitle="Layers from inside to outside" icon="layers">
-				{#snippet actions()}
-					{#if wall.template && wall.modified}
-						<Button
-							size="sm"
-							variant="ghost"
-							icon="reset"
-							onclick={() => wall.loadTemplate(wall.templateId)}
-							>{wall.template.config ? 'Last saved' : 'Template'}</Button
+{#snippet resultSummary()}
+	<span class={['font-medium', verdictStyles[verdict.tone].ink]}>{verdict.title}</span>
+	· U {fmt(wall.result.uValue, 2)}
+{/snippet}
+
+{#snippet climateSummary()}
+	In {fmt(wall.climate.tIn)} °C / {fmt(wall.climate.rhIn, 0)} % · Out {fmt(wall.climate.tOut)} °C /
+	{fmt(wall.climate.rhOut, 0)} %
+{/snippet}
+
+{#snippet detailsSummary()}
+	{@const keywords = wall.template?.keywords.length ?? 0}
+	{wall.template?.description ||
+		(keywords ? `${keywords} ${keywords === 1 ? 'tag' : 'tags'}` : 'No description')}
+{/snippet}
+
+{#snippet layerCount()}
+	<span class="text-xs font-normal text-fg-subtle tabular-nums">
+		{wall.layers.length}
+		{wall.layers.length === 1 ? 'layer' : 'layers'}
+		{#if wall.layers.length}· {fmt(wall.result.totalThickness, 0)} mm{/if}
+	</span>
+{/snippet}
+
+<div class="flex h-dvh flex-col overflow-hidden bg-surface">
+	<WorkbenchHeader {user} onabout={() => about?.open()} onlibrary={() => library?.open()} />
+
+	<div
+		class="relative flex min-h-0 flex-1 flex-col lg:grid lg:grid-cols-[21rem_minmax(0,1fr)_21rem] lg:grid-rows-[minmax(0,1fr)] xl:grid-cols-[25rem_minmax(0,1fr)_24rem]"
+	>
+		<section
+			aria-label="Live view"
+			class={[
+				'shrink-0 overflow-hidden bg-surface transition-[height] duration-300 ease-out lg:col-start-2 lg:row-start-1 lg:h-auto',
+				sheetOpen ? 'h-0' : 'h-[clamp(16rem,46dvh,30rem)]'
+			]}
+		>
+			<ChartCanvas
+				onaddlayer={() => show('layers')}
+				onresult={() => show('result')}
+				onlibrary={() => library?.open()}
+			/>
+		</section>
+
+		<div
+			class="relative z-10 flex min-h-0 flex-1 flex-col border-t border-line bg-surface shadow-[0_-12px_32px_-16px_rgb(0_0_0/0.3)] lg:contents"
+		>
+			<!-- Small screens: handle and tabs of the sheet -->
+			<div class="shrink-0 border-b border-line lg:hidden">
+				<button
+					type="button"
+					aria-label={sheetOpen ? 'Show chart' : 'Expand panel'}
+					aria-expanded={sheetOpen}
+					{onpointerdown}
+					{onpointerup}
+					class="flex h-6 w-full touch-none items-center justify-center"
+				>
+					<span class="h-1 w-10 rounded-full bg-line-strong"></span>
+				</button>
+				<div role="tablist" aria-label="Panel" class="flex px-1">
+					{#each tabs as option (option.value)}
+						<button
+							type="button"
+							role="tab"
+							aria-selected={tab === option.value}
+							onclick={() => (tab = option.value)}
+							class={[
+								'relative -mb-px flex h-10 flex-1 items-center justify-center gap-1.5 border-b-2 text-sm font-medium transition',
+								tab === option.value ? 'border-fg text-fg' : 'border-transparent text-fg-muted'
+							]}
 						>
-					{/if}
-				{/snippet}
-				<LayerEditor />
-			</Card>
-		</div>
-
-		<div class="flex min-w-0 flex-col gap-6">
-			{#if wall.activeLayers.length}
-				<Card title="Result">
-					<ResultSummary />
-				</Card>
-
-				<Card
-					title="Cross-section"
-					subtitle="Temperature and dew point across the build-up – hover for details"
-				>
-					<WallSection
-						layers={wall.activeLayers}
-						result={wall.result}
-						climate={wall.climate}
-						number={wall.layerNumber}
-					/>
-					<details class="group mt-4">
-						<summary class="cursor-pointer text-sm font-medium text-stone-600 hover:text-stone-900">
-							Values at layer boundaries
-						</summary>
-						<div class="mt-3"><BoundaryTable /></div>
-					</details>
-				</Card>
-
-				<Card
-					title="Critical conditions"
-					subtitle="At which outdoor temperature and indoor humidity does it get critical?"
-				>
-					<RiskChart curve={wall.limitCurve} climate={wall.climate} />
-				</Card>
-
-				<Card
-					title="Glaser diagram"
-					subtitle="Vapour pressure must not touch the saturation pressure"
-				>
-					<GlaserChart layers={wall.activeLayers} result={wall.result} number={wall.layerNumber} />
-				</Card>
-			{:else}
-				<div
-					class="grid min-h-64 place-items-center rounded-2xl border border-dashed border-stone-300 p-8 text-center text-sm text-stone-500"
-				>
-					{wall.layers.length
-						? 'All layers are deactivated – activate one to see the results.'
-						: 'Add layers to the build-up to see the results.'}
+							<Icon name={option.icon} size={15} />
+							{option.label}
+							{#if option.value === 'result' && wall.activeLayers.length}
+								<span class={['size-2 rounded-full', verdictStyles[verdict.tone].dot]}></span>
+							{/if}
+						</button>
+					{/each}
 				</div>
-			{/if}
+			</div>
+
+			<aside
+				aria-label="Build-up"
+				class={[
+					'flex min-h-0 flex-col max-lg:flex-1 lg:col-start-1 lg:row-start-1 lg:border-r lg:border-line',
+					tab !== 'layers' && 'max-lg:hidden'
+				]}
+			>
+				<div
+					class="flex min-h-0 flex-1 scroll-thin flex-col overflow-y-auto overscroll-contain pb-[calc(1rem+env(safe-area-inset-bottom))]"
+				>
+					<section>
+						{@render panelHead('layers', 'Build-up', layerCount)}
+						<LayerEditor />
+					</section>
+					{#if wall.template?.config || wall.template?.description || wall.template?.keywords.length}
+						<section aria-label="Details" class="max-lg:mt-4 max-lg:border-t max-lg:border-line">
+							{@render collapsibleHead('info', 'Details', 'details', detailsSummary)}
+							<div class={['p-4', collapsed.details && 'lg:hidden']}>
+								<h3
+									class="mb-2 text-[11px] font-medium tracking-wide text-fg-subtle uppercase lg:hidden"
+								>
+									Details
+								</h3>
+								<BuildUpDetails />
+							</div>
+						</section>
+					{/if}
+				</div>
+			</aside>
+
+			<aside
+				aria-label="Climate and result"
+				class={[
+					'flex min-h-0 scroll-thin flex-col overflow-y-auto overscroll-contain max-lg:flex-1 lg:col-start-3 lg:row-start-1 lg:border-l lg:border-line',
+					tab === 'layers' && 'max-lg:hidden'
+				]}
+			>
+				{#if wall.activeLayers.length}
+					<section class={[tab !== 'result' && 'max-lg:hidden']}>
+						{@render collapsibleHead('gauge', 'Result', 'result', resultSummary)}
+						<div class={[collapsed.result && 'lg:hidden']}>
+							<ResultSummary />
+						</div>
+					</section>
+				{:else}
+					<p
+						class={[
+							'p-6 text-center text-sm text-fg-muted lg:hidden',
+							tab !== 'result' && 'max-lg:hidden'
+						]}
+					>
+						Add layers to see the result.
+					</p>
+				{/if}
+				<section
+					class={[
+						'pb-[calc(1rem+env(safe-area-inset-bottom))]',
+						tab !== 'climate' && 'max-lg:hidden',
+						collapsed.climate && 'lg:pb-0'
+					]}
+				>
+					{@render collapsibleHead('thermometer', 'Climate', 'climate', climateSummary)}
+					<div class={[collapsed.climate && 'lg:hidden']}>
+						<ClimatePanel />
+					</div>
+				</section>
+			</aside>
 		</div>
 	</div>
+</div>
 
-	<Card title="How it works" icon="info">
-		<div class="grid gap-6 text-sm text-stone-600 md:grid-cols-3">
-			<div>
-				<h3 class="mb-1 font-semibold text-stone-800">Temperature profile</h3>
-				<p>
-					The temperature drops across each layer in proportion to its thermal resistance R = d/λ.
-					Surface resistances are R<sub>si</sub> = 0.25 and R<sub>se</sub> = 0.04 m²K/W (0.08 behind a
-					ventilation gap). Layers outside a ventilated air gap are ignored.
-				</p>
-			</div>
-			<div>
-				<h3 class="mb-1 font-semibold text-stone-800">Dew point & condensation</h3>
-				<p>
-					The indoor air has a dew point (e.g. 9.3 °C at 20 °C / 50 %). Reaching it inside the
-					build-up alone is not a problem – what matters is how much vapour gets there. The Glaser
-					method compares the vapour pressure with the saturation pressure; where they meet,
-					condensation forms.
-				</p>
-			</div>
-			<div>
-				<h3 class="mb-1 font-semibold text-stone-800">Limitations</h3>
-				<p>
-					A steady-state estimate (EN ISO 13788) without capillary transport, moisture storage or
-					thermal bridges. Capillary-active internal insulation is rated conservatively. For a
-					detailed assessment use a hygrothermal simulation (e.g. WUFI).
-				</p>
-			</div>
-		</div>
-	</Card>
-</main>
+<AboutDialog bind:this={about} />
+<Library bind:this={library} />

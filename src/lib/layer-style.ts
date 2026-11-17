@@ -31,3 +31,9 @@ export const categoryOrder: MaterialCategory[] = [
 	'air',
 	'cladding'
 ];
+
+/** Readable text colour on top of a category fill */
+export function inkOn(fill: string): string {
+	const [r, g, b] = [1, 3, 5].map((i) => parseInt(fill.slice(i, i + 2), 16) / 255);
+	return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.55 ? '#18181b' : '#ffffff';
+}

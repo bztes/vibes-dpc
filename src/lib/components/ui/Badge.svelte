@@ -1,5 +1,13 @@
 <script lang="ts" module>
 	export type Tone = 'good' | 'warning' | 'critical' | 'neutral' | 'info';
+
+	export const toneClasses: Record<Tone, string> = {
+		good: 'bg-good/12 text-good-ink',
+		warning: 'bg-warning/15 text-warning-ink',
+		critical: 'bg-critical/12 text-critical-ink',
+		info: 'bg-accent/12 text-accent',
+		neutral: 'bg-surface-3 text-fg-muted'
+	};
 </script>
 
 <script lang="ts">
@@ -17,14 +25,10 @@
 
 <span
 	class={[
-		'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap',
-		tone === 'good' && 'bg-green-50 text-good-ink ring-1 ring-good/30',
-		tone === 'warning' && 'bg-amber-50 text-warning-ink ring-1 ring-warning/50',
-		tone === 'critical' && 'bg-red-50 text-critical-ink ring-1 ring-critical/30',
-		tone === 'info' && 'bg-sky-50 text-sky-800 ring-1 ring-sky-200',
-		tone === 'neutral' && 'bg-stone-100 text-stone-600 ring-1 ring-stone-200'
+		'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap',
+		toneClasses[tone]
 	]}
 >
-	{#if icon}<Icon name={icon} size={12} />{/if}
+	{#if icon}<Icon name={icon} size={11} />{/if}
 	{@render children()}
 </span>

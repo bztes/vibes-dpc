@@ -1,4 +1,6 @@
 import { createContext } from 'svelte';
+import { resolve } from '$app/paths';
+import { getVerdict } from '#lib/verdict.ts';
 import {
 	analyzeWall,
 	criticalOutdoorTemperature,
@@ -30,6 +32,15 @@ function read<T>(key: string): T | undefined {
 
 /** A template from the catalogue or, if `config`, one of the user's configs */
 export type Template = Assembly & { config?: boolean };
+
+/**
+ * URL of a template: catalogue templates at `/[id]`, configs from this browser's localStorage at
+ * `/local/[id]`. Without a template: an empty build-up
+ */
+export const templatePath = (template?: Pick<Template, 'id' | 'config'>) =>
+	template?.config
+		? resolve('/(calculator)/local/[id]', { id: template.id })
+		: resolve('/(calculator)/[[id]]', template ? { id: template.id } : {});
 
 /** The user's configs, saved in this browser */
 export const readConfigs = (): Assembly[] =>
@@ -128,6 +139,7 @@ export class WallModel {
 	/** Layers that take part in the calculation; results refer to their positions */
 	activeLayers = $derived(this.layers.filter((layer) => !layer.disabled));
 	result = $derived(analyzeWall(this.activeLayers, this.climate));
+	verdict = $derived(getVerdict(this));
 	limitCurve = $derived(rhLimitCurve(this.activeLayers, this.climate));
 	currentLimits = $derived(
 		rhLimits(this.activeLayers, this.climate.tIn, this.climate.tOut, this.climate.rhOut)
@@ -157,9 +169,10 @@ export class WallModel {
 		this.layers = template.layers.map(createLayer);
 	}
 
-	addLayer(materialId: string) {
+	/** Inserts a layer before `index`; by default on the outside */
+	addLayer(materialId: string, index = this.layers.length) {
 		const material = this.material(materialId);
-		if (material) this.layers.push(fromMaterial(material));
+		if (material) this.layers.splice(index, 0, fromMaterial(material));
 	}
 
 	/** Swaps the material of a layer but keeps its thickness */

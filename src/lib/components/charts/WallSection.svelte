@@ -20,14 +20,21 @@
 	let { layers, result, climate, number = (index) => index + 1 }: Props = $props();
 
 	const id = $props.id();
-	const W = 960;
-	const H = 440;
-	const M = { top: 78, right: 16, bottom: 46, left: 48 };
-	const ZONE = 72;
-	const wallX0 = M.left + ZONE;
-	const wallX1 = W - M.right - ZONE;
+	// Drawn at the rendered pixel size so labels stay legible on small screens
+	let width = $state(960);
+	let height = $state(0);
+	let W = $derived(Math.max(280, Math.round(width)));
+	// Fills the available height; without one it keeps a pleasant aspect ratio
+	let H = $derived(
+		Math.round(height > 0 ? Math.max(200, height) : Math.min(440, Math.max(320, W * 0.46)))
+	);
+	let narrow = $derived(W < 560);
+	const M = { top: 78, right: 12, bottom: 46, left: 40 };
+	let ZONE = $derived(narrow ? 52 : 72);
+	let wallX0 = $derived(M.left + ZONE);
+	let wallX1 = $derived(W - M.right - ZONE);
 	const plotTop = M.top;
-	const plotBottom = H - M.bottom;
+	let plotBottom = $derived(H - M.bottom);
 
 	let bands = $derived(layerBands(layers, wallX0, wallX1 - wallX0));
 	let nodePx = $derived(result.nodes.map((node) => mmToPx(bands, node.x)));
@@ -126,19 +133,21 @@
 	let hovered = $derived(hover === null ? null : result.nodes[hover]);
 </script>
 
-<div class="flex flex-col gap-3">
-	<div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+<div class="flex h-full min-h-0 flex-col gap-3">
+	<div
+		class="flex [scrollbar-width:none] items-center gap-x-4 gap-y-1 whitespace-nowrap max-sm:overflow-x-auto sm:flex-wrap"
+	>
 		<LegendItem label="Temperature" color="var(--color-temp)" />
 		<LegendItem label="Dew point (linear vapour pressure)" color="var(--color-dew)" />
 		<LegendItem label="Dew point above temperature" color="var(--color-dew)" kind="area" />
 		<LegendItem label="Condensation (Glaser)" color="var(--color-critical)" kind="hatch" />
-		<LegendItem label="Indoor air dew point" color="#44403c" kind="dashed" />
+		<LegendItem label="Indoor air dew point" color="var(--chart-ink)" kind="dashed" />
 	</div>
 
-	<div class="relative">
+	<div class="relative min-h-[200px] flex-1" bind:clientWidth={width} bind:clientHeight={height}>
 		<svg
 			viewBox="0 0 {W} {H}"
-			class="h-auto w-full touch-none select-none"
+			class="absolute inset-0 size-full touch-pan-y select-none"
 			role="img"
 			aria-label="Wall section with temperature and dew point profile. Inner surface {fmt(
 				result.tSi
@@ -149,39 +158,61 @@
 			<LayerPatterns prefix={id} />
 
 			<!-- Climate zones -->
-			<rect x={M.left} y={plotTop} width={ZONE} height={plotBottom - plotTop} fill="#fdf1ea" />
-			<rect x={wallX1} y={plotTop} width={ZONE} height={plotBottom - plotTop} fill="#eaf2fb" />
+			<rect
+				x={M.left}
+				y={plotTop}
+				width={ZONE}
+				height={plotBottom - plotTop}
+				fill="var(--zone-warm)"
+			/>
+			<rect
+				x={wallX1}
+				y={plotTop}
+				width={ZONE}
+				height={plotBottom - plotTop}
+				fill="var(--zone-cold)"
+			/>
 			<text
 				x={M.left + ZONE / 2}
-				y={M.top - 44}
+				y={M.top - (narrow ? 52 : 44)}
 				text-anchor="middle"
-				class="fill-stone-800 text-[12px] font-semibold"
+				class="fill-chart-ink text-[12px] font-semibold"
 			>
 				INSIDE
 			</text>
 			<text
 				x={M.left + ZONE / 2}
-				y={M.top - 28}
+				y={M.top - (narrow ? 36 : 28)}
 				text-anchor="middle"
-				class="fill-stone-500 text-[11px]"
+				class="fill-chart-muted text-[11px]"
 			>
-				{fmt(climate.tIn)} °C · {fmt(climate.rhIn, 0)} %
+				{#if narrow}
+					<tspan>{fmt(climate.tIn)} °C</tspan>
+					<tspan x={M.left + ZONE / 2} dy="13">{fmt(climate.rhIn, 0)} %</tspan>
+				{:else}
+					{fmt(climate.tIn)} °C · {fmt(climate.rhIn, 0)} %
+				{/if}
 			</text>
 			<text
 				x={wallX1 + ZONE / 2}
-				y={M.top - 44}
+				y={M.top - (narrow ? 52 : 44)}
 				text-anchor="middle"
-				class="fill-stone-800 text-[12px] font-semibold"
+				class="fill-chart-ink text-[12px] font-semibold"
 			>
 				OUTSIDE
 			</text>
 			<text
 				x={wallX1 + ZONE / 2}
-				y={M.top - 28}
+				y={M.top - (narrow ? 36 : 28)}
 				text-anchor="middle"
-				class="fill-stone-500 text-[11px]"
+				class="fill-chart-muted text-[11px]"
 			>
-				{fmt(climate.tOut)} °C · {fmt(climate.rhOut, 0)} %
+				{#if narrow}
+					<tspan>{fmt(climate.tOut)} °C</tspan>
+					<tspan x={wallX1 + ZONE / 2} dy="13">{fmt(climate.rhOut, 0)} %</tspan>
+				{:else}
+					{fmt(climate.tOut)} °C · {fmt(climate.rhOut, 0)} %
+				{/if}
 			</text>
 
 			<!-- Layers -->
@@ -195,7 +226,7 @@
 						width={band.width}
 						height={plotBottom - plotTop}
 						fill={style.pattern === 'none' ? style.fill : `url(#${id}-${band.layer.category})`}
-						stroke="#fff"
+						stroke="var(--surface)"
 						stroke-width="1"
 					/>
 					{#if band.layer.ventilated}
@@ -214,7 +245,7 @@
 							x={band.x + band.width / 2}
 							y={plotBottom - 8}
 							text-anchor="middle"
-							class="fill-stone-700 text-[10px] tabular-nums"
+							class="fill-chart-ink text-[10px] tabular-nums"
 						>
 							{fmt(band.layer.thickness, band.layer.thickness % 1 ? 1 : 0)}
 						</text>
@@ -225,13 +256,13 @@
 						cx={markers[i].cx}
 						cy={markers[i].cy}
 						r="9"
-						fill={inactive ? '#d6d3d1' : '#292524'}
+						fill={inactive ? 'var(--surface-3)' : 'var(--chart-ink)'}
 					/>
 					<text
 						x={markers[i].cx}
 						y={markers[i].cy + 3.5}
 						text-anchor="middle"
-						class={['text-[10px] font-semibold', inactive ? 'fill-stone-600' : 'fill-white']}
+						class={['text-[10px] font-semibold', inactive ? 'fill-fg-muted' : 'fill-surface']}
 					>
 						{number(i)}
 					</text>
@@ -240,19 +271,25 @@
 						x2={markers[i].cx}
 						y1={markers[i].cy + 9}
 						y2={plotTop}
-						stroke="#a8a29e"
+						stroke="var(--chart-muted)"
 						stroke-width="0.75"
 					/>
 				</g>
 			{/each}
 
 			{#if result.ventilated}
-				<line x1={outerPx} x2={wallX1} y1={plotBottom + 14} y2={plotBottom + 14} stroke="#a8a29e" />
+				<line
+					x1={outerPx}
+					x2={wallX1}
+					y1={plotBottom + 14}
+					y2={plotBottom + 14}
+					stroke="var(--chart-muted)"
+				/>
 				<text
 					x={(outerPx + wallX1) / 2}
 					y={plotBottom + 30}
 					text-anchor="middle"
-					class="fill-stone-500 text-[10px]"
+					class="fill-chart-muted text-[10px]"
 				>
 					ventilated – not effective
 				</text>
@@ -265,7 +302,7 @@
 					x2={W - M.right}
 					y1={y(tick)}
 					y2={y(tick)}
-					stroke="#1c1917"
+					stroke="var(--chart-ink)"
 					stroke-opacity="0.12"
 					stroke-width="0.75"
 				/>
@@ -273,12 +310,12 @@
 					x={M.left - 6}
 					y={y(tick) + 3.5}
 					text-anchor="end"
-					class="fill-stone-500 text-[10px] tabular-nums"
+					class="fill-chart-muted text-[10px] tabular-nums"
 				>
 					{fmt(tick, 0)}
 				</text>
 			{/each}
-			<text x={M.left - 6} y={plotTop - 8} text-anchor="end" class="fill-stone-500 text-[10px]"
+			<text x={M.left - 6} y={plotTop - 8} text-anchor="end" class="fill-chart-muted text-[10px]"
 				>°C</text
 			>
 			{#if y.invert(plotBottom) < 0 && y.invert(plotTop) > 0}
@@ -287,27 +324,31 @@
 					x2={W - M.right}
 					y1={y(0)}
 					y2={y(0)}
-					stroke="#57534e"
+					stroke="var(--chart-ink)"
 					stroke-opacity="0.5"
 					stroke-width="1"
 				/>
 			{/if}
-			<text
-				x={M.left + ZONE / 2}
-				y={plotBottom + 30}
-				text-anchor="middle"
-				class="fill-stone-500 text-[10px]"
-			>
-				warm
-			</text>
-			<text
-				x={wallX1 + ZONE / 2}
-				y={plotBottom + 30}
-				text-anchor="middle"
-				class="fill-stone-500 text-[10px]"
-			>
-				cold
-			</text>
+			{#if !narrow}
+				<text
+					x={M.left + ZONE / 2}
+					y={plotBottom + 30}
+					text-anchor="middle"
+					class="fill-chart-muted text-[10px]"
+				>
+					warm
+				</text>
+			{/if}
+			{#if !narrow}
+				<text
+					x={wallX1 + ZONE / 2}
+					y={plotBottom + 30}
+					text-anchor="middle"
+					class="fill-chart-muted text-[10px]"
+				>
+					cold
+				</text>
+			{/if}
 
 			<!-- Risk and condensation areas -->
 			{#each riskAreas as area, i (i)}
@@ -354,7 +395,7 @@
 					x2={px}
 					y1={plotTop}
 					y2={plotBottom}
-					stroke="#44403c"
+					stroke="var(--chart-ink)"
 					stroke-width="1.25"
 					stroke-dasharray="4 3"
 				/>
@@ -362,17 +403,17 @@
 					cx={px}
 					cy={y(result.dewPointIn)}
 					r="4"
-					fill="#44403c"
-					stroke="#fff"
+					fill="var(--chart-ink)"
+					stroke="var(--surface)"
 					stroke-width="2"
 				/>
 				<text
 					x={px + (px > W - 200 ? -6 : 6)}
 					y={y(result.dewPointIn) - 8}
 					text-anchor={px > W - 200 ? 'end' : 'start'}
-					class="fill-stone-800 text-[11px] font-medium"
+					class="fill-chart-ink text-[11px] font-medium"
 					paint-order="stroke"
-					stroke="#fff"
+					stroke="var(--surface)"
 					stroke-width="3"
 				>
 					Dew point {fmt(result.dewPointIn)} °C
@@ -386,7 +427,7 @@
 					x2={nodePx[hover]}
 					y1={plotTop}
 					y2={plotBottom}
-					stroke="#1c1917"
+					stroke="var(--chart-ink)"
 					stroke-width="1"
 				/>
 				<circle
@@ -394,7 +435,7 @@
 					cy={y(hovered.t)}
 					r="4.5"
 					fill="var(--color-temp)"
-					stroke="#fff"
+					stroke="var(--surface)"
 					stroke-width="2"
 				/>
 				{#if Number.isFinite(hovered.dewLinear)}
@@ -403,7 +444,7 @@
 						cy={y(hovered.dewLinear)}
 						r="4.5"
 						fill="var(--color-dew)"
-						stroke="#fff"
+						stroke="var(--surface)"
 						stroke-width="2"
 					/>
 				{/if}
@@ -414,23 +455,18 @@
 			{@const layer = layers[hovered.layer]}
 			<ChartTooltip x={(nodePx[hover] / W) * 100} title={layer?.name}>
 				<div class="flex justify-between gap-4">
-					<span>Position</span><span class="text-stone-900 tabular-nums"
-						>{fmt(hovered.x, 1)} mm</span
-					>
+					<span>Position</span><span class="text-fg tabular-nums">{fmt(hovered.x, 1)} mm</span>
 				</div>
 				<div class="flex justify-between gap-4">
-					<span>Temperature</span><span class="text-stone-900 tabular-nums"
-						>{fmt(hovered.t)} °C</span
-					>
+					<span>Temperature</span><span class="text-fg tabular-nums">{fmt(hovered.t)} °C</span>
 				</div>
 				<div class="flex justify-between gap-4">
-					<span>Dew point</span><span class="text-stone-900 tabular-nums"
-						>{fmt(hovered.dewLinear)} °C</span
+					<span>Dew point</span><span class="text-fg tabular-nums">{fmt(hovered.dewLinear)} °C</span
 					>
 				</div>
 				<div class="flex justify-between gap-4">
 					<span>Rel. humidity</span>
-					<span class="text-stone-900 tabular-nums"
+					<span class="text-fg tabular-nums"
 						>{fmt(Math.min(100, (hovered.pv / hovered.ps) * 100), 0)} %</span
 					>
 				</div>

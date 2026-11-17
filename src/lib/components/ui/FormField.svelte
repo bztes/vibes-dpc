@@ -15,16 +15,16 @@
 </script>
 
 <div class="flex flex-col gap-1">
-	<label for={id} class="text-xs font-medium text-stone-500">{label}</label>
+	<label for={id} class="text-xs font-medium text-fg-muted">{label}</label>
 	<input
 		{id}
 		{...field.as(type)}
 		{...rest}
 		class={[
-			'h-10 rounded-lg border bg-white px-3 text-sm outline-none focus:ring-2',
+			'h-11 rounded-lg border bg-surface px-3.5 text-base outline-none focus:ring-4 sm:text-sm',
 			field.issues()
-				? 'border-critical focus:ring-critical/20'
-				: 'border-stone-300 focus:border-sky-500 focus:ring-sky-500/20'
+				? 'border-critical focus:ring-critical/15'
+				: 'border-line-strong focus:border-accent focus:ring-accent/15'
 		]}
 	/>
 	{#each field.issues() ?? [] as issue (issue.message)}

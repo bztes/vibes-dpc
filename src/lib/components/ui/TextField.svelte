@@ -21,18 +21,17 @@
 </script>
 
 <div class={['flex flex-col gap-1', className]}>
-	<label for={id} class={hideLabel ? 'sr-only' : 'text-xs font-medium text-stone-500'}
-		>{label}</label
+	<label for={id} class={hideLabel ? 'sr-only' : 'text-xs font-medium text-fg-muted'}>{label}</label
 	>
 	<input
 		{id}
 		bind:value
 		aria-invalid={!!error}
 		class={[
-			'h-9 rounded-lg border bg-white px-2.5 text-sm outline-none focus:ring-2',
+			'h-10 rounded-lg border bg-surface px-3 text-base outline-none focus:ring-4 sm:h-9 sm:text-sm',
 			error
-				? 'border-critical focus:ring-critical/20'
-				: 'border-stone-300 focus:border-sky-500 focus:ring-sky-500/20'
+				? 'border-critical focus:ring-critical/15'
+				: 'border-line-strong focus:border-accent focus:ring-accent/15'
 		]}
 		{...rest}
 	/>

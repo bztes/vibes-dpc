@@ -13,14 +13,21 @@
 
 	let { curve, climate }: Props = $props();
 
-	const W = 720;
-	const H = 380;
+	// Drawn at the rendered pixel size so labels stay legible on small screens
+	let width = $state(720);
+	let height = $state(0);
+	let W = $derived(Math.max(280, Math.round(width)));
+	// Fills the available height; without one it keeps a pleasant aspect ratio
+	let H = $derived(
+		Math.round(height > 0 ? Math.max(200, height) : Math.min(400, Math.max(280, W * 0.53)))
+	);
+	let narrow = $derived(W < 560);
 	const M = { top: 20, right: 20, bottom: 44, left: 48 };
 
 	let x = $derived(
 		linear([curve[0]?.tOut ?? -20, curve[curve.length - 1]?.tOut ?? 20], [M.left, W - M.right])
 	);
-	const y = linear([0, 100], [H - M.bottom, M.top]);
+	let y = $derived(linear([0, 100], [H - M.bottom, M.top]));
 	const cap = (v: number) => Math.min(100, v);
 
 	let condensationLine = $derived(
@@ -97,18 +104,20 @@
 	}
 </script>
 
-<div class="flex flex-col gap-3">
-	<div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+<div class="flex h-full min-h-0 flex-col gap-3">
+	<div
+		class="flex [scrollbar-width:none] items-center gap-x-4 gap-y-1 whitespace-nowrap max-sm:overflow-x-auto sm:flex-wrap"
+	>
 		<LegendItem label="safe" color="var(--color-good)" kind="area" />
 		<LegendItem label="Mould risk (surface > 80 %)" color="var(--color-warning)" kind="area" />
 		<LegendItem label="Interstitial condensation" color="var(--color-critical)" kind="area" />
-		<LegendItem label="current conditions" color="#1c1917" kind="dot" />
+		<LegendItem label="current conditions" color="var(--chart-ink)" kind="dot" />
 	</div>
 
-	<div class="relative">
+	<div class="relative min-h-[200px] flex-1" bind:clientWidth={width} bind:clientHeight={height}>
 		<svg
 			viewBox="0 0 {W} {H}"
-			class="h-auto w-full touch-none select-none"
+			class="absolute inset-0 size-full touch-pan-y select-none"
 			role="img"
 			aria-label="Indoor humidity limits as a function of outdoor temperature"
 			{onpointermove}
@@ -124,7 +133,7 @@
 					x2={W - M.right}
 					y1={y(tick)}
 					y2={y(tick)}
-					stroke="#1c1917"
+					stroke="var(--chart-ink)"
 					stroke-opacity="0.12"
 					stroke-width="0.75"
 				/>
@@ -132,7 +141,7 @@
 					x={M.left - 6}
 					y={y(tick) + 3.5}
 					text-anchor="end"
-					class="fill-stone-500 text-[10px] tabular-nums">{tick}</text
+					class="fill-chart-muted text-[10px] tabular-nums">{tick}</text
 				>
 			{/each}
 			{#each ticks(x.invert(M.left), x.invert(W - M.right), 8) as tick (tick)}
@@ -141,7 +150,7 @@
 					x2={x(tick)}
 					y1={M.top}
 					y2={H - M.bottom}
-					stroke="#1c1917"
+					stroke="var(--chart-ink)"
 					stroke-opacity={tick === 0 ? 0.3 : 0.07}
 					stroke-width="0.75"
 				/>
@@ -149,19 +158,19 @@
 					x={x(tick)}
 					y={H - M.bottom + 16}
 					text-anchor="middle"
-					class="fill-stone-500 text-[10px] tabular-nums">{tick}</text
+					class="fill-chart-muted text-[10px] tabular-nums">{tick}</text
 				>
 			{/each}
-			<text x={M.left - 6} y={M.top - 6} text-anchor="end" class="fill-stone-500 text-[10px]"
-				>% RH inside</text
-			>
+			<text x={4} y={M.top - 8} class="fill-chart-muted text-[10px]">% RH inside</text>
 			<text
 				x={(M.left + W - M.right) / 2}
 				y={H - 8}
 				text-anchor="middle"
-				class="fill-stone-500 text-[10px]"
+				class="fill-chart-muted text-[10px]"
 			>
-				Outdoor temperature in °C (inside {fmt(climate.tIn)} °C, outside {fmt(climate.rhOut, 0)} % RH)
+				Outdoor temperature in °C{narrow
+					? ''
+					: ` (inside ${fmt(climate.tIn)} °C, outside ${fmt(climate.rhOut, 0)} % RH)`}
 			</text>
 
 			<path
@@ -184,7 +193,7 @@
 				x2={x(current.t)}
 				y1={y(climate.rhIn)}
 				y2={H - M.bottom}
-				stroke="#1c1917"
+				stroke="var(--chart-ink)"
 				stroke-width="1"
 				stroke-dasharray="2 3"
 			/>
@@ -193,7 +202,7 @@
 				x2={x(current.t)}
 				y1={y(climate.rhIn)}
 				y2={y(climate.rhIn)}
-				stroke="#1c1917"
+				stroke="var(--chart-ink)"
 				stroke-width="1"
 				stroke-dasharray="2 3"
 			/>
@@ -202,7 +211,7 @@
 				cy={y(climate.rhIn)}
 				r="7"
 				fill={statusColor[current.status as keyof typeof statusColor]}
-				stroke="#1c1917"
+				stroke="var(--chart-ink)"
 				stroke-width="2"
 			/>
 
@@ -212,7 +221,7 @@
 					x2={x(hover.tOut)}
 					y1={M.top}
 					y2={H - M.bottom}
-					stroke="#1c1917"
+					stroke="var(--chart-ink)"
 					stroke-width="1"
 				/>
 				<circle
@@ -220,7 +229,7 @@
 					cy={y(cap(hover.condensation))}
 					r="4.5"
 					fill="var(--color-critical)"
-					stroke="#fff"
+					stroke="var(--surface)"
 					stroke-width="2"
 				/>
 				<circle
@@ -228,7 +237,7 @@
 					cy={y(cap(hover.mould))}
 					r="4.5"
 					fill="var(--color-warning)"
-					stroke="#fff"
+					stroke="var(--surface)"
 					stroke-width="2"
 				/>
 			{/if}
@@ -238,17 +247,17 @@
 			<ChartTooltip x={(x(hover.tOut) / W) * 100} title="Outside {fmt(hover.tOut, 0)} °C">
 				<div class="flex justify-between gap-4">
 					<span>Condensation above</span>
-					<span class="text-stone-900 tabular-nums"
+					<span class="text-fg tabular-nums"
 						>{hover.condensation >= 100 ? '–' : `${fmt(hover.condensation, 0)} %`}</span
 					>
 				</div>
 				<div class="flex justify-between gap-4">
 					<span>Mould risk above</span>
-					<span class="text-stone-900 tabular-nums"
+					<span class="text-fg tabular-nums"
 						>{hover.mould >= 100 ? '–' : `${fmt(hover.mould, 0)} %`}</span
 					>
 				</div>
-				<div class="mt-1 text-[11px] text-stone-400">Indoor humidity at {fmt(climate.tIn)} °C</div>
+				<div class="mt-1 text-[11px] text-fg-subtle">Indoor humidity at {fmt(climate.tIn)} °C</div>
 			</ChartTooltip>
 		{/if}
 	</div>

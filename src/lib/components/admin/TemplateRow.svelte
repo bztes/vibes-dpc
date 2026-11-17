@@ -5,7 +5,7 @@
 	import Button from '#lib/components/ui/Button.svelte';
 	import TagInput from '#lib/components/ui/TagInput.svelte';
 	import TextField from '#lib/components/ui/TextField.svelte';
-	import { categoryStyles } from '#lib/layer-style.ts';
+	import { categoryStyles, inkOn } from '#lib/layer-style.ts';
 	import type { Assembly } from '#lib/physics/types.ts';
 
 	interface Props {
@@ -52,7 +52,7 @@
 </script>
 
 <form
-	class="flex flex-col gap-3 border-b border-stone-100 py-4"
+	class="flex flex-col gap-3 border-b border-line py-4"
 	onsubmit={(event) => {
 		event.preventDefault();
 		save();
@@ -67,8 +67,8 @@
 		<div class="flex gap-1">
 			<Button type="submit" disabled={busy || !dirty || !draft.name.trim()}>Save</Button>
 			<a
-				href={resolve('/calculator/[[id]]', { id: template.id })}
-				class="inline-flex h-9 items-center rounded-lg px-3 text-sm font-medium text-stone-600 hover:bg-stone-100 hover:text-stone-900"
+				href={resolve('/(calculator)/[[id]]', { id: template.id })}
+				class="inline-flex h-9 items-center rounded-lg px-3 text-sm font-medium text-fg-muted hover:bg-surface-3 hover:text-fg"
 			>
 				Edit layers
 			</a>
@@ -85,9 +85,9 @@
 		{#if template.builtIn}<Badge>example</Badge>{/if}
 		{#each template.layers as layer, i (i)}
 			<span
-				class="rounded-md px-1.5 py-0.5 text-[11px] text-stone-700"
+				class="rounded-md px-1.5 py-0.5 text-[11px]"
 				style:background={categoryStyles[layer.category].fill}
-				style:color={layer.category === 'membrane' ? '#fff' : undefined}
+				style:color={inkOn(categoryStyles[layer.category].fill)}
 			>
 				{layer.name} · {layer.thickness} mm
 			</span>

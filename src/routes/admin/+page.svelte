@@ -23,10 +23,10 @@
 
 <AppHeader {user} />
 
-<main class="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6">
+<main class="mx-auto flex max-w-7xl flex-col gap-4 px-3 py-4 sm:gap-6 sm:px-6 sm:py-6">
 	<div>
-		<h1 class="text-xl font-semibold text-stone-900">Admin</h1>
-		<p class="text-sm text-stone-500">Signed in as {user?.name} ({user?.email})</p>
+		<h1 class="text-2xl font-semibold tracking-tight text-fg">Admin</h1>
+		<p class="text-sm text-fg-muted">Signed in as {user?.name} ({user?.email})</p>
 	</div>
 
 	<Card
@@ -37,7 +37,7 @@
 		{#each catalog.assemblies as template (template.id)}
 			<TemplateRow {template} />
 		{:else}
-			<p class="text-sm text-stone-500">No templates yet. Use “Duplicate” in the calculator.</p>
+			<p class="text-sm text-fg-muted">No templates yet. Use “Duplicate” in the calculator.</p>
 		{/each}
 	</Card>
 
@@ -45,7 +45,7 @@
 		title="Materials"
 		subtitle="{materials.length} materials · values are copied into layers when selected"
 	>
-		<div class="rounded-xl bg-stone-50 px-3">
+		<div class="rounded-lg bg-surface-2 px-3 ring-1 ring-line ring-inset">
 			{#key newKey}
 				<MaterialRow oncreated={() => newKey++} />
 			{/key}
