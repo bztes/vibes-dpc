@@ -44,3 +44,9 @@ export const assemblyLayer = sqliteTable('assembly_layer', {
 });
 
 export * from './auth.schema';
+
+/** App-wide settings as JSON values – see `#lib/server/settings.ts` */
+export const setting = sqliteTable('setting', {
+	key: text('key').primaryKey(),
+	value: text('value', { mode: 'json' }).notNull()
+});

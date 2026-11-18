@@ -20,7 +20,8 @@ const START = pathname('');
 const PAGES = [START];
 
 /** Paths that must not be cached: sign-in and admin data are only useful online */
-const isPrivate = (pathname: string) => /^\/(?:[a-z]{2}\/)?(?:api|admin)(?:\/|$)/.test(pathname);
+const isPrivate = (pathname: string) =>
+	/^\/(?:[a-z]{2}\/)?(?:api|admin|login|signup)(?:\/|$)/.test(pathname);
 
 /** Fetches pages and stores them, ignoring failures */
 async function cachePages(cache: Cache, paths: string[]) {

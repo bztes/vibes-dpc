@@ -3,6 +3,7 @@
 	import { dismiss } from '#lib/dismiss.ts';
 	import type { ClientUser } from '#lib/catalog.remote.ts';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { deleteAssembly, saveAssembly } from '#lib/catalog.remote.ts';
 	import AppIcon from '#lib/components/AppIcon.svelte';
 	import UserMenu from '#lib/components/UserMenu.svelte';
@@ -248,7 +249,18 @@
 				</div>
 			{/if}
 		</div>
-		{#if user}<span class="max-sm:hidden"><UserMenu {user} /></span>{/if}
+		{#if user}
+			<span class="max-sm:hidden"><UserMenu {user} /></span>
+		{:else}
+			<a
+				href={resolve('/login')}
+				title="Sign in"
+				class="flex h-10 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-fg-muted transition hover:bg-surface-3 hover:text-fg focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none sm:h-9"
+			>
+				<Icon name="login" size={16} />
+				<span class="max-lg:sr-only">Sign in</span>
+			</a>
+		{/if}
 	</div>
 </header>
 

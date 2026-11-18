@@ -1,4 +1,14 @@
 <script lang="ts" module>
+	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+	import KeyRound from '@lucide/svelte/icons/key-round';
+	import LayoutDashboard from '@lucide/svelte/icons/layout-dashboard';
+	import Lock from '@lucide/svelte/icons/lock';
+	import LogIn from '@lucide/svelte/icons/log-in';
+	import Pencil from '@lucide/svelte/icons/pencil';
+	import ShieldCheck from '@lucide/svelte/icons/shield-check';
+	import UserPlus from '@lucide/svelte/icons/user-plus';
+	import Users from '@lucide/svelte/icons/users';
+	import ExternalLink from '@lucide/svelte/icons/external-link';
 	import ArrowDown from '@lucide/svelte/icons/arrow-down';
 	import ArrowUp from '@lucide/svelte/icons/arrow-up';
 	import BookOpen from '@lucide/svelte/icons/book-open';
@@ -81,7 +91,17 @@
 		book: BookOpen,
 		gauge: Gauge,
 		wall: BrickWall,
-		copyPlus: CopyPlus
+		copyPlus: CopyPlus,
+		back: ArrowLeft,
+		key: KeyRound,
+		dashboard: LayoutDashboard,
+		lock: Lock,
+		login: LogIn,
+		edit: Pencil,
+		shield: ShieldCheck,
+		userPlus: UserPlus,
+		users: Users,
+		external: ExternalLink
 	} as const;
 
 	export type IconName = keyof typeof icons;

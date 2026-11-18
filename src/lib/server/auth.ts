@@ -6,6 +6,7 @@ import { count, eq, getTableColumns, lt } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.ts';
 import { session, user } from '#lib/server/db/schema.ts';
 import { TokenBucket } from '#lib/server/rate-limit.ts';
+import { getSetting } from '#lib/server/settings.ts';
 
 const DAY = 24 * 60 * 60 * 1000;
 /** Sessions expire after 30 days of inactivity */
@@ -133,32 +134,59 @@ function setSessionCookie(cookies: Cookies, token: string, expires: Date) {
 
 // ─── Accounts ────────────────────────────────────────────────────────────────
 
-/** Only the very first account can be registered – it becomes the admin and sign-up is closed afterwards. */
-export function hasAdmin(q: Pick<typeof db, 'select'> = db) {
+export type Role = SessionUser['role'];
+
+/** Whether any account exists – until then, the first account to register becomes the admin */
+export function hasUsers(q: Pick<typeof db, 'select'> = db) {
 	const [{ value }] = q.select({ value: count() }).from(user).all();
 	return value > 0;
 }
 
-/** Creates the admin account; returns its id, or `null` if registration is already closed */
-export async function createAdmin({
+/** Sign-up is open for the first account (the admin) and afterwards while an admin allows it */
+export const signupOpen = (q: Pick<typeof db, 'select'> = db) =>
+	!hasUsers(q) || getSetting('signupEnabled', q);
+
+/**
+ * Registers an account. The first account becomes the admin, later ones are users – unless
+ * `role` is given (an admin adding an account, which also works while sign-up is closed).
+ * Returns the new id, `'closed'` if sign-up is closed or `'taken'` if the email is in use.
+ */
+export async function createUser({
 	name,
 	email,
-	password
+	password,
+	role
 }: {
 	name: string;
 	email: string;
 	password: string;
+	role?: Role;
 }) {
-	if (hasAdmin() || password.length > MAX_PASSWORD_LENGTH) return null;
+	email = email.toLowerCase();
+	if (!role && !signupOpen()) return 'closed';
+	if (password.length > MAX_PASSWORD_LENGTH) return 'closed';
 	const hash = await hashPassword(password);
 	// Checked again in the transaction in case another sign-up finished while hashing
 	return db.transaction((tx) => {
-		if (hasAdmin(tx)) return null;
+		const first = !hasUsers(tx);
+		if (!role && !first && !getSetting('signupEnabled', tx)) return 'closed' as const;
+		if (tx.select({ id: user.id }).from(user).where(eq(user.email, email)).get()) {
+			return 'taken' as const;
+		}
 		return tx
 			.insert(user)
-			.values({ name, email: email.toLowerCase(), passwordHash: hash, role: 'admin' })
+			.values({ name, email, passwordHash: hash, role: first ? 'admin' : (role ?? 'user') })
 			.returning({ id: user.id })
 			.get().id;
+	});
+}
+
+/** Sets a new password and signs the account out everywhere */
+export async function setPassword(userId: string, password: string) {
+	const hash = await hashPassword(password);
+	db.transaction((tx) => {
+		tx.update(user).set({ passwordHash: hash }).where(eq(user.id, userId)).run();
+		tx.delete(session).where(eq(session.userId, userId)).run();
 	});
 }
 
@@ -178,7 +206,7 @@ export async function verifyCredentials(email: string, password: string) {
 	return row && valid ? row.id : null;
 }
 
-export const isAdmin = (user: App.Locals['user']) => user?.role === 'admin';
+export const isAdmin = (user?: Pick<SessionUser, 'role'> | null) => user?.role === 'admin';
 
 /** Throws 401 unless the current request belongs to a signed-in admin */
 export function requireAdmin() {

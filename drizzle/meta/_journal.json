@@ -22,6 +22,13 @@
       "when": 1794938220853,
       "tag": "0002_session_secret",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1794988922784,
+      "tag": "0003_settings",
+      "breakpoints": true
     }
   ]
 }

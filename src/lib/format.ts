@@ -27,3 +27,19 @@ export function searchMatcher(query: string): (text: string) => boolean {
 		return terms.every((term) => lower.includes(term));
 	};
 }
+
+const relativeFormat = new Intl.RelativeTimeFormat('en-GB', { numeric: 'auto' });
+const dateFormat = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium' });
+
+/** "3 days ago", or the date for anything older than a month */
+export function relativeTime(time: number, now = Date.now()): string {
+	const seconds = Math.round((time - now) / 1000);
+	const abs = Math.abs(seconds);
+	if (abs < 60) return 'just now';
+	if (abs < 3600) return relativeFormat.format(Math.round(seconds / 60), 'minute');
+	if (abs < 86_400) return relativeFormat.format(Math.round(seconds / 3600), 'hour');
+	if (abs < 30 * 86_400) return relativeFormat.format(Math.round(seconds / 86_400), 'day');
+	return dateFormat.format(time);
+}
+
+export const formatDate = (time: number) => dateFormat.format(time);
