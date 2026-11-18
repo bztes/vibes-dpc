@@ -10,9 +10,10 @@
 	const wall = getWall();
 
 	const presetIcons: Record<ClimatePreset, IconName> = {
-		hot: 'sun',
-		warm: 'cloudSun',
-		mild: 'cloud',
+		warm: 'sun',
+		mild: 'cloudSun',
+		cool: 'cloud',
+		frost: 'cloudSnow',
 		cold: 'snowflake',
 		freezing: 'thermometerCold'
 	};

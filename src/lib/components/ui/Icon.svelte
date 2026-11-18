@@ -9,6 +9,7 @@
 	import UserPlus from '@lucide/svelte/icons/user-plus';
 	import Users from '@lucide/svelte/icons/users';
 	import ExternalLink from '@lucide/svelte/icons/external-link';
+	import CloudSnow from '@lucide/svelte/icons/cloud-snow';
 	import ArrowDown from '@lucide/svelte/icons/arrow-down';
 	import ArrowUp from '@lucide/svelte/icons/arrow-up';
 	import BookOpen from '@lucide/svelte/icons/book-open';
@@ -83,6 +84,7 @@
 		sun: Sun,
 		cloudSun: CloudSun,
 		cloud: Cloud,
+		cloudSnow: CloudSnow,
 		snowflake: Snowflake,
 		thermometerCold: ThermometerSnowflake,
 		section: ChartArea,

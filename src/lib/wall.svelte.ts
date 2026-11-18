@@ -82,19 +82,24 @@ const strip = (layers: Layer[]): AssemblyLayer[] =>
 		disabled: !!disabled
 	}));
 
-/** Default winter design climate */
-export const DEFAULT_CLIMATE: Climate = { tIn: 20, rhIn: 50, tOut: -5, rhOut: 80 };
-
-/** Typical outdoor conditions, from summer heat to deep winter */
 export const CLIMATE_PRESETS = {
-	hot: { label: 'Hot', tOut: 30, rhOut: 60 },
-	warm: { label: 'Warm', tOut: 15, rhOut: 75 },
-	mild: { label: 'Mild', tOut: 0, rhOut: 85 },
-	cold: { label: 'Cold', tOut: -10, rhOut: 80 },
-	freezing: { label: 'Freezing', tOut: -20, rhOut: 80 }
+	warm: { label: 'Warm', tOut: 25, rhOut: 60 },
+	mild: { label: 'Mild', tOut: 15, rhOut: 75 },
+	cool: { label: 'Cool', tOut: 5, rhOut: 85 },
+	frost: { label: 'Frost', tOut: 0, rhOut: 85 },
+	cold: { label: 'Cold', tOut: -5, rhOut: 80 },
+	freezing: { label: 'Freezing', tOut: -15, rhOut: 80 }
 } as const;
 
 export type ClimatePreset = keyof typeof CLIMATE_PRESETS;
+
+/** Default winter design climate: the cold preset */
+export const DEFAULT_CLIMATE: Climate = {
+	tIn: 20,
+	rhIn: 50,
+	tOut: CLIMATE_PRESETS.cold.tOut,
+	rhOut: CLIMATE_PRESETS.cold.rhOut
+};
 
 export class WallModel {
 	layers = $state<Layer[]>([]);
