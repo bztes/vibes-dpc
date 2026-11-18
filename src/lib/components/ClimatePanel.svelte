@@ -1,10 +1,8 @@
 <script lang="ts">
-	import { dismiss } from '#lib/dismiss.ts';
-	import { flip } from '#lib/flip.ts';
 	import type { Snippet } from 'svelte';
 	import Icon, { type IconName } from '#lib/components/ui/Icon.svelte';
+	import PillMenu from '#lib/components/ui/PillMenu.svelte';
 	import RangeField from '#lib/components/ui/RangeField.svelte';
-	import SegmentedControl from '#lib/components/ui/SegmentedControl.svelte';
 	import { fmt } from '#lib/format.ts';
 	import { VAPOUR_EXCESS, dewPoint, type HumidityClass } from '#lib/physics/glaser.ts';
 	import { CLIMATE_PRESETS, getWall, type ClimatePreset } from '#lib/wall.svelte.ts';
@@ -18,9 +16,12 @@
 		cold: 'snowflake',
 		freezing: 'thermometerCold'
 	};
-	const presets = Object.keys(CLIMATE_PRESETS) as ClimatePreset[];
-
-	let presetOpen = $state(false);
+	const presetOptions = (Object.keys(CLIMATE_PRESETS) as ClimatePreset[]).map((key) => ({
+		value: key,
+		label: CLIMATE_PRESETS[key].label,
+		icon: presetIcons[key],
+		hint: `${fmt(CLIMATE_PRESETS[key].tOut)} °C · ${CLIMATE_PRESETS[key].rhOut} %`
+	}));
 
 	const classLabels: Record<HumidityClass, string> = {
 		1: 'Storage, unoccupied',
@@ -30,11 +31,12 @@
 		5: 'Laundries, breweries, pools'
 	};
 	const classOptions = [
-		{ value: 'manual', label: 'Manual', title: 'Set the indoor humidity yourself' },
+		{ value: 'manual', label: 'Manual', description: 'Set the indoor humidity yourself' },
 		...(Object.keys(VAPOUR_EXCESS) as `${HumidityClass}`[]).map((key) => ({
 			value: key,
-			label: key,
-			title: `Class ${key}: ${classLabels[Number(key) as HumidityClass]}`
+			label: `Class ${key}`,
+			description: classLabels[Number(key) as HumidityClass],
+			hint: `+${VAPOUR_EXCESS[Number(key) as HumidityClass]} g/m³`
 		}))
 	];
 
@@ -58,67 +60,36 @@
 {/snippet}
 
 {#snippet presetPicker()}
-	{@const current = wall.climatePreset}
-	<div class="relative" {@attach presetOpen && dismiss(() => (presetOpen = false))}>
-		<button
-			type="button"
-			aria-label="Outdoor preset: {current ? CLIMATE_PRESETS[current].label : 'Custom'}"
-			aria-haspopup="menu"
-			aria-expanded={presetOpen}
-			onclick={() => (presetOpen = !presetOpen)}
-			class={[
-				'flex h-6 items-center gap-1 rounded-md pr-1 pl-1.5 text-[11px] font-medium transition outline-none focus-visible:ring-2 focus-visible:ring-accent',
-				presetOpen
-					? 'bg-surface-3 text-fg'
-					: 'bg-surface-3/60 text-fg-muted hover:bg-surface-3 hover:text-fg'
-			]}
-		>
-			{#if current}<Icon name={presetIcons[current]} size={12} />{/if}
-			{current ? CLIMATE_PRESETS[current].label : 'Custom'}
-			<Icon
-				name="chevron"
-				size={12}
-				class={['text-fg-subtle transition-transform', presetOpen && 'rotate-180']}
-			/>
-		</button>
-		{#if presetOpen}
-			<div
-				{@attach flip}
-				role="menu"
-				aria-label="Outdoor presets"
-				class="absolute top-full left-0 z-30 mt-1.5 flex w-56 flex-col rounded-xl bg-surface p-1 shadow-float ring-1 ring-line"
-			>
-				{#each presets as key (key)}
-					{@const preset = CLIMATE_PRESETS[key]}
-					<button
-						type="button"
-						role="menuitemradio"
-						aria-checked={current === key}
-						onclick={() => {
-							wall.applyClimatePreset(key);
-							presetOpen = false;
-						}}
-						class={[
-							'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition',
-							current === key
-								? 'bg-accent/10 text-accent'
-								: 'text-fg-muted hover:bg-surface-3 hover:text-fg'
-						]}
-					>
-						<Icon name={presetIcons[key]} size={15} />
-						<span class="flex-1">{preset.label}</span>
-						<span class="text-[11px] text-fg-subtle tabular-nums">
-							{fmt(preset.tOut)} °C · {preset.rhOut} %
-						</span>
-					</button>
-				{/each}
-			</div>
-		{/if}
-	</div>
+	<PillMenu
+		label="Outdoor preset"
+		value={wall.climatePreset}
+		options={presetOptions}
+		placeholder="Custom"
+		onchange={(key) => wall.applyClimatePreset(key)}
+	/>
+{/snippet}
+
+{#snippet vapourExcess()}
+	{#if wall.humidityClass}
+		<p class="truncate py-0.5 text-[11px] text-fg-subtle">
+			Vapour excess +{VAPOUR_EXCESS[wall.humidityClass]} g/m³ over outside
+		</p>
+	{/if}
+{/snippet}
+
+{#snippet humidityClass()}
+	<PillMenu
+		label="Humidity class (EN ISO 13788)"
+		value={wall.humidityClass ? String(wall.humidityClass) : 'manual'}
+		options={classOptions}
+		width="w-64"
+		onchange={(key) =>
+			wall.setHumidityClass(key === 'manual' ? undefined : (Number(key) as HumidityClass))}
+	/>
 {/snippet}
 
 <div class="flex flex-col">
-	<section class="flex flex-col gap-2.5 border-b border-line p-4">
+	<section class="flex flex-col gap-2 border-b border-line px-4 py-3">
 		{@render zone('Inside', 'home', 'bg-temp/15 text-temp', wall.result.dewPointIn)}
 		<RangeField
 			label="Temperature"
@@ -138,7 +109,8 @@
 			min={20}
 			max={95}
 			accent="var(--dew)"
-			disabled={!!wall.humidityClass}
+			extra={humidityClass}
+			children={wall.humidityClass ? vapourExcess : undefined}
 			bind:value={
 				() => wall.climate.rhIn,
 				(rhIn) => {
@@ -146,25 +118,9 @@
 				}
 			}
 		/>
-		<div class="flex flex-col gap-1.5">
-			<span class="text-xs text-fg-muted">Humidity class (EN ISO 13788)</span>
-			<SegmentedControl
-				label="Humidity class (EN ISO 13788)"
-				fill
-				value={wall.humidityClass ? String(wall.humidityClass) : 'manual'}
-				options={classOptions}
-				onchange={(key) =>
-					wall.setHumidityClass(key === 'manual' ? undefined : (Number(key) as HumidityClass))}
-			/>
-			{#if wall.humidityClass}
-				<span class="text-[11px] text-fg-subtle">
-					{classLabels[wall.humidityClass]} · vapour excess +{VAPOUR_EXCESS[wall.humidityClass]} g/m³
-				</span>
-			{/if}
-		</div>
 	</section>
 
-	<section class="flex flex-col gap-2.5 p-4">
+	<section class="flex flex-col gap-2 px-4 py-3">
 		{@render zone('Outside', 'cloud', 'bg-dew/15 text-dew', dewOut, presetPicker)}
 		<RangeField
 			label="Temperature"

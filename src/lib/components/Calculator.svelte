@@ -1,5 +1,5 @@
 <!--
-	Full-screen workbench. Large screens: layers | live canvas | climate & result.
+	Full-screen workbench. Large screens: layers & climate | live canvas | result.
 	Small screens: the canvas on top and a bottom sheet with tabs below it.
 	The sheet uses `display: contents` on large screens, so its panels become grid columns.
 -->
@@ -9,7 +9,6 @@
 	import { cacheForOffline } from '#lib/offline.ts';
 	import { fmt } from '#lib/format.ts';
 	import AboutDialog from '#lib/components/AboutDialog.svelte';
-	import BuildUpDetails from '#lib/components/BuildUpDetails.svelte';
 	import ChartCanvas from '#lib/components/ChartCanvas.svelte';
 	import ClimatePanel from '#lib/components/ClimatePanel.svelte';
 	import LayerEditor from '#lib/components/LayerEditor.svelte';
@@ -69,7 +68,7 @@
 	let verdict = $derived(wall.verdict);
 
 	/** Large screens: sidebar sections folded down to their summary */
-	let collapsed = $state({ details: false, result: false, climate: false });
+	let collapsed = $state({ result: false, climate: false });
 
 	// Drag the sheet handle up or down; a tap toggles it
 	let dragStart: number | undefined;
@@ -139,12 +138,6 @@
 	{fmt(wall.climate.rhOut, 0)} %
 {/snippet}
 
-{#snippet detailsSummary()}
-	{@const keywords = wall.template?.keywords.length ?? 0}
-	{wall.template?.description ||
-		(keywords ? `${keywords} ${keywords === 1 ? 'tag' : 'tags'}` : 'No description')}
-{/snippet}
-
 {#snippet layerCount()}
 	<span class="text-xs font-normal text-fg-subtle tabular-nums">
 		{wall.layers.length}
@@ -211,71 +204,45 @@
 			</div>
 
 			<aside
-				aria-label="Build-up"
+				aria-label="Build-up and climate"
 				class={[
 					'flex min-h-0 flex-col max-lg:flex-1 lg:col-start-1 lg:row-start-1 lg:border-r lg:border-line',
-					tab !== 'layers' && 'max-lg:hidden'
+					tab === 'result' && 'max-lg:hidden'
 				]}
 			>
 				<div
 					class="flex min-h-0 flex-1 scroll-thin flex-col overflow-y-auto overscroll-contain pb-[calc(1rem+env(safe-area-inset-bottom))]"
 				>
-					<section>
+					<section class={[tab !== 'layers' && 'max-lg:hidden']}>
 						{@render panelHead('layers', 'Build-up', layerCount)}
 						<LayerEditor />
 					</section>
-					{#if wall.template?.config || wall.template?.description || wall.template?.keywords.length}
-						<section aria-label="Details" class="max-lg:mt-4 max-lg:border-t max-lg:border-line">
-							{@render collapsibleHead('info', 'Details', 'details', detailsSummary)}
-							<div class={['p-4', collapsed.details && 'lg:hidden']}>
-								<h3
-									class="mb-2 text-[11px] font-medium tracking-wide text-fg-subtle uppercase lg:hidden"
-								>
-									Details
-								</h3>
-								<BuildUpDetails />
-							</div>
-						</section>
-					{/if}
+					<section class={[tab !== 'climate' && 'max-lg:hidden']}>
+						{@render collapsibleHead('thermometer', 'Climate', 'climate', climateSummary)}
+						<div class={[collapsed.climate && 'lg:hidden']}>
+							<ClimatePanel />
+						</div>
+					</section>
 				</div>
 			</aside>
 
 			<aside
-				aria-label="Climate and result"
+				aria-label="Result"
 				class={[
-					'flex min-h-0 scroll-thin flex-col overflow-y-auto overscroll-contain max-lg:flex-1 lg:col-start-3 lg:row-start-1 lg:border-l lg:border-line',
-					tab === 'layers' && 'max-lg:hidden'
+					'flex min-h-0 scroll-thin flex-col overflow-y-auto overscroll-contain pb-[calc(1rem+env(safe-area-inset-bottom))] max-lg:flex-1 lg:col-start-3 lg:row-start-1 lg:border-l lg:border-line',
+					tab !== 'result' && 'max-lg:hidden'
 				]}
 			>
 				{#if wall.activeLayers.length}
-					<section class={[tab !== 'result' && 'max-lg:hidden']}>
+					<section>
 						{@render collapsibleHead('gauge', 'Result', 'result', resultSummary)}
 						<div class={[collapsed.result && 'lg:hidden']}>
 							<ResultSummary />
 						</div>
 					</section>
 				{:else}
-					<p
-						class={[
-							'p-6 text-center text-sm text-fg-muted lg:hidden',
-							tab !== 'result' && 'max-lg:hidden'
-						]}
-					>
-						Add layers to see the result.
-					</p>
+					<p class="p-6 text-center text-sm text-fg-muted">Add layers to see the result.</p>
 				{/if}
-				<section
-					class={[
-						'pb-[calc(1rem+env(safe-area-inset-bottom))]',
-						tab !== 'climate' && 'max-lg:hidden',
-						collapsed.climate && 'lg:pb-0'
-					]}
-				>
-					{@render collapsibleHead('thermometer', 'Climate', 'climate', climateSummary)}
-					<div class={[collapsed.climate && 'lg:hidden']}>
-						<ClimatePanel />
-					</div>
-				</section>
 			</aside>
 		</div>
 	</div>
