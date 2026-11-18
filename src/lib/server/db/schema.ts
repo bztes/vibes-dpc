@@ -1,5 +1,6 @@
-import { integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { index, integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import type { MaterialCategory } from '#lib/physics/types.ts';
+import { user } from './auth.schema';
 
 export const material = sqliteTable('material', {
 	id: text('id').primaryKey(),
@@ -12,19 +13,28 @@ export const material = sqliteTable('material', {
 	note: text('note')
 });
 
-/** A build-up – either a built-in example or one saved by an admin */
-export const assembly = sqliteTable('assembly', {
-	id: text('id')
-		.primaryKey()
-		.$defaultFn(() => crypto.randomUUID()),
-	name: text('name').notNull(),
-	description: text('description').notNull().default(''),
-	keywords: text('keywords', { mode: 'json' }).$type<string[]>().notNull().default([]),
-	builtIn: integer('built_in', { mode: 'boolean' }).notNull().default(false),
-	createdAt: integer('created_at', { mode: 'timestamp' })
-		.notNull()
-		.$defaultFn(() => new Date())
-});
+/**
+ * A build-up: a catalogue template (a built-in example or one saved by an admin) or, with an
+ * `ownerId`, a user's own build-up
+ */
+export const assembly = sqliteTable(
+	'assembly',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		/** The user this build-up belongs to; catalogue templates have none */
+		ownerId: text('owner_id').references(() => user.id, { onDelete: 'cascade' }),
+		name: text('name').notNull(),
+		description: text('description').notNull().default(''),
+		keywords: text('keywords', { mode: 'json' }).$type<string[]>().notNull().default([]),
+		builtIn: integer('built_in', { mode: 'boolean' }).notNull().default(false),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.$defaultFn(() => new Date())
+	},
+	(table) => [index('assembly_owner_id_idx').on(table.ownerId)]
+);
 
 /** Layers store their own values so that customised materials survive catalogue changes */
 export const assemblyLayer = sqliteTable('assembly_layer', {

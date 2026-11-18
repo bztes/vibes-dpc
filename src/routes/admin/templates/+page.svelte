@@ -204,7 +204,7 @@
 	tone="critical"
 	icon="trash"
 	title="Delete “{deleteTarget?.name}”?"
-	subtitle="The template is removed for everyone. Build-ups saved in browsers are not affected."
+	subtitle="The template is removed for everyone. Users’ own build-ups are not affected."
 >
 	{#if error}<p class="text-sm text-critical-ink">{error}</p>{/if}
 	{#snippet actions()}

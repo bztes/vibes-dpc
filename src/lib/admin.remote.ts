@@ -1,6 +1,6 @@
 import * as v from 'valibot';
 import { error } from '@sveltejs/kit';
-import { asc, count, eq, gt } from 'drizzle-orm';
+import { asc, count, eq, gt, isNull } from 'drizzle-orm';
 import { command, getRequestEvent, query } from '$app/server';
 import { createUser, requireAdmin, setPassword } from '#lib/server/auth.ts';
 import { db } from '#lib/server/db/index.ts';
@@ -54,13 +54,14 @@ export const getUsers = query((): AdminUser[] => {
 /** Counts for the overview page */
 export const getStats = query(() => {
 	requireAdmin();
-	const total = (table: typeof user | typeof material | typeof assembly) =>
+	const total = (table: typeof user | typeof material) =>
 		db.select({ value: count() }).from(table).get()!.value;
 	return {
 		users: total(user),
 		admins: db.select({ value: count() }).from(user).where(eq(user.role, 'admin')).get()!.value,
 		materials: total(material),
-		templates: total(assembly)
+		templates: db.select({ value: count() }).from(assembly).where(isNull(assembly.ownerId)).get()!
+			.value
 	};
 });
 

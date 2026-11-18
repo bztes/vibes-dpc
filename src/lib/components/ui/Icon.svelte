@@ -19,6 +19,9 @@
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import Cloud from '@lucide/svelte/icons/cloud';
+	import CloudCheck from '@lucide/svelte/icons/cloud-check';
+	import CircleDashed from '@lucide/svelte/icons/circle-dashed';
+	import HardDrive from '@lucide/svelte/icons/hard-drive';
 	import CloudSun from '@lucide/svelte/icons/cloud-sun';
 	import Copy from '@lucide/svelte/icons/copy';
 	import CopyPlus from '@lucide/svelte/icons/copy-plus';
@@ -101,7 +104,10 @@
 		shield: ShieldCheck,
 		userPlus: UserPlus,
 		users: Users,
-		external: ExternalLink
+		external: ExternalLink,
+		cloudCheck: CloudCheck,
+		local: HardDrive,
+		unsaved: CircleDashed
 	} as const;
 
 	export type IconName = keyof typeof icons;

@@ -25,6 +25,37 @@
 	/** The loaded build-up can be overwritten or deleted */
 	let editable = $derived(own || (!!wall.template && admin));
 
+	/**
+	 * Where the build-up is stored: the user's account, this browser, or nowhere. Unchanged catalogue
+	 * templates need no indicator
+	 */
+	let storage = $derived.by(
+		(): { icon: IconName; label: string; hint: string; warn?: boolean; short?: boolean } | null => {
+			if (own && wall.signedIn)
+				return {
+					icon: 'cloudCheck',
+					label: 'Saved to account',
+					hint: 'Saved to your account',
+					short: true
+				};
+			if (own)
+				return {
+					icon: 'local',
+					label: 'Saved in this browser',
+					hint: 'Only saved in this browser. Sign in to keep it in your account',
+					short: true
+				};
+			if (wall.modified && wall.layers.length > 0)
+				return {
+					icon: 'unsaved',
+					label: 'Not saved',
+					hint: 'This build-up isn’t saved anywhere yet',
+					warn: true
+				};
+			return null;
+		}
+	);
+
 	let menuOpen = $state(false);
 
 	let busy = $state(false);
@@ -46,28 +77,29 @@
 	/** Shows the build-up with `id` in the URL; it is already loaded, so nothing reloads */
 	function show(id: string, config: boolean) {
 		wall.templateId = id;
-		return goto(templatePath({ id, config }), { replace: true, reset: false });
+		return goto(templatePath({ id, local: config && !wall.signedIn }), {
+			replace: true,
+			reset: false
+		});
 	}
 
 	// Saves straight away; name, description and tags can be edited in place afterwards
-	function saveAsNew() {
-		menuOpen = false;
-		const template = wall.template;
-		void show(
-			wall.saveConfig({
+	const saveAsNew = () =>
+		run(async () => {
+			const template = wall.template;
+			const id = await wall.saveConfig({
 				name: template ? `${template.name} (copy)` : 'My build-up',
 				description: template?.description ?? '',
 				keywords: template?.keywords ?? []
-			}),
-			true
-		);
-	}
+			});
+			await show(id, true);
+		});
 
 	const update = () =>
 		run(async () => {
 			const template = wall.template!;
 			if (template.config) {
-				wall.saveConfig(template);
+				await wall.saveConfig(template);
 				return;
 			}
 			await saveAssembly({
@@ -102,7 +134,7 @@
 	const remove = () =>
 		run(async () => {
 			const template = wall.template!;
-			if (template.config) wall.deleteConfig(template.id);
+			if (template.config) await wall.deleteConfig(template.id);
 			else await deleteAssembly(template.id);
 			deleteDialog?.close();
 			await goto(templatePath());
@@ -177,9 +209,19 @@
 			<div class="flex items-center gap-1.5 text-[11px] leading-tight font-medium text-fg-subtle">
 				<Icon name={own ? 'save' : wall.template ? 'home' : 'layers'} size={11} />
 				{own ? 'My build-up' : wall.template ? 'Template' : 'New build-up'}
-				{#if wall.template && wall.modified}
+				{#if storage}
+					<span
+						class={['flex items-center gap-1', storage.warn && 'text-warning-ink']}
+						title={storage.hint}
+					>
+						<span class="text-line">·</span>
+						<Icon name={storage.icon} size={11} />
+						<span class={{ 'max-sm:sr-only': storage.short }}>{storage.label}</span>
+					</span>
+				{/if}
+				{#if own && wall.modified}
 					<span class="flex items-center gap-1 text-warning-ink">
-						<span class="size-1.5 rounded-full bg-warning"></span>Unsaved
+						<span class="size-1.5 rounded-full bg-warning"></span>Unsaved changes
 					</span>
 				{/if}
 			</div>
@@ -195,7 +237,7 @@
 					}}
 					onchange={(event) => {
 						const name = event.currentTarget.value.trim();
-						if (name) wall.updateConfigDetails(wall.templateId, { name });
+						if (name) void run(() => wall.updateConfigDetails(wall.templateId, { name }));
 						else event.currentTarget.value = wall.template!.name;
 					}}
 				/>
@@ -239,7 +281,7 @@
 	<h2 id="delete-title" class="mt-4 font-semibold">Delete “{wall.template?.name}”?</h2>
 	<p class="mt-1 text-sm text-fg-muted">
 		{own
-			? 'This build-up will be removed from this browser.'
+			? `This build-up will be removed from ${wall.signedIn ? 'your account' : 'this browser'}.`
 			: 'This template will be removed for everyone.'} This can’t be undone.
 	</p>
 	<form method="dialog" class="mt-6 flex justify-end gap-2">

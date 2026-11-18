@@ -1,10 +1,13 @@
 import * as v from 'valibot';
-import { asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull } from 'drizzle-orm';
+import { error } from '@sveltejs/kit';
 import { command, getRequestEvent, query } from '$app/server';
 import { isAdmin, requireAdmin } from '#lib/server/auth.ts';
+import { readAssemblies, writeLayers } from '#lib/server/assemblies.ts';
 import { db } from '#lib/server/db/index.ts';
-import { assembly, assemblyLayer, material } from '#lib/server/db/schema.ts';
-import { materialCategories, type Assembly, type Catalog } from '#lib/physics/types.ts';
+import { assembly, material } from '#lib/server/db/schema.ts';
+import { assemblyInput, category, lambda, mu, name, thickness } from '#lib/validation.ts';
+import type { Catalog } from '#lib/physics/types.ts';
 
 /** Material catalogue and templates */
 export const getCatalog = query((): Catalog => {
@@ -12,32 +15,10 @@ export const getCatalog = query((): Catalog => {
 	const assemblies = db
 		.select()
 		.from(assembly)
+		.where(isNull(assembly.ownerId))
 		.orderBy(desc(assembly.builtIn), asc(assembly.createdAt))
 		.all();
-	const layers = db.select().from(assemblyLayer).orderBy(asc(assemblyLayer.position)).all();
-
-	return {
-		materials,
-		assemblies: assemblies.map((row): Assembly => ({
-			id: row.id,
-			name: row.name,
-			description: row.description,
-			keywords: row.keywords,
-			builtIn: row.builtIn,
-			layers: layers
-				.filter((layer) => layer.assemblyId === row.id)
-				.map(({ materialId, name, category, lambda, mu, thickness, ventilated, disabled }) => ({
-					material: materialId ?? undefined,
-					name,
-					category,
-					lambda,
-					mu,
-					thickness,
-					ventilated,
-					disabled
-				}))
-		}))
-	};
+	return { materials, assemblies: readAssemblies(assemblies) };
 });
 
 /** The signed-in user as shown in the UI */
@@ -50,12 +31,6 @@ export const getUser = query(() => {
 		? ({ name: user.name, email: user.email, admin: isAdmin(user) } satisfies ClientUser)
 		: null;
 });
-
-const name = v.pipe(v.string(), v.trim(), v.minLength(1, 'Name is required'), v.maxLength(120));
-const category = v.picklist(materialCategories);
-const lambda = v.pipe(v.number(), v.minValue(0.001), v.maxValue(500));
-const mu = v.pipe(v.number(), v.minValue(0), v.maxValue(10_000_000));
-const thickness = v.pipe(v.number(), v.gtValue(0), v.maxValue(5000));
 
 export const saveMaterial = command(
 	v.object({
@@ -96,49 +71,23 @@ export const saveAssembly = command(
 	v.object({
 		/** Update this template instead of creating a new one */
 		id: v.optional(v.string()),
-		name,
-		description: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(500)), ''),
-		keywords: v.optional(
-			v.pipe(
-				v.array(v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(60))),
-				v.maxLength(30)
-			),
-			[]
-		),
+		...assemblyInput.entries,
 		layers: v.pipe(
-			v.array(
-				v.object({
-					material: v.optional(v.string()),
-					name,
-					category,
-					lambda,
-					mu,
-					thickness,
-					ventilated: v.optional(v.boolean()),
-					disabled: v.optional(v.boolean())
-				})
-			),
+			assemblyInput.entries.layers,
 			v.minLength(1, 'A template needs at least one layer')
 		)
 	}),
 	({ id, name, description, keywords, layers }) => {
 		requireAdmin();
-		const known = new Set(
-			db
-				.select({ id: material.id })
-				.from(material)
-				.all()
-				.map((row) => row.id)
-		);
-
 		const savedId = db.transaction((tx) => {
 			let assemblyId = id;
 			if (assemblyId) {
-				tx.update(assembly)
+				const updated = tx
+					.update(assembly)
 					.set({ name, description, keywords })
-					.where(eq(assembly.id, assemblyId))
+					.where(and(eq(assembly.id, assemblyId), isNull(assembly.ownerId)))
 					.run();
-				tx.delete(assemblyLayer).where(eq(assemblyLayer.assemblyId, assemblyId)).run();
+				if (!updated.changes) error(404, 'Template not found');
 			} else {
 				[{ id: assemblyId }] = tx
 					.insert(assembly)
@@ -146,18 +95,7 @@ export const saveAssembly = command(
 					.returning({ id: assembly.id })
 					.all();
 			}
-			tx.insert(assemblyLayer)
-				.values(
-					layers.map(({ material: materialId, ventilated, disabled, ...layer }, position) => ({
-						...layer,
-						assemblyId: assemblyId!,
-						position,
-						materialId: materialId && known.has(materialId) ? materialId : null,
-						ventilated: ventilated ?? false,
-						disabled: disabled ?? false
-					}))
-				)
-				.run();
+			writeLayers(tx, assemblyId, layers);
 			return assemblyId;
 		});
 
@@ -168,6 +106,8 @@ export const saveAssembly = command(
 
 export const deleteAssembly = command(v.string(), (id) => {
 	requireAdmin();
-	db.delete(assembly).where(eq(assembly.id, id)).run();
+	db.delete(assembly)
+		.where(and(eq(assembly.id, id), isNull(assembly.ownerId)))
+		.run();
 	void getCatalog().refresh();
 });

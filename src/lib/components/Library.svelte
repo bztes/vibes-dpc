@@ -138,7 +138,9 @@
 				<h2
 					class="sticky top-0 z-10 border-b border-line bg-surface/95 px-4 py-2 text-[11px] font-medium tracking-wide text-fg-subtle uppercase backdrop-blur"
 				>
-					My build-ups <span class="font-normal normal-case">· saved in this browser</span>
+					My build-ups <span class="font-normal normal-case"
+						>· {wall.signedIn ? 'saved in your account' : 'saved in this browser'}</span
+					>
 				</h2>
 				<ul class="divide-y divide-line border-b border-line">
 					{#each own as assembly (assembly.id)}{@render entry(assembly, 'save')}{/each}

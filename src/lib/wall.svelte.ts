@@ -2,6 +2,13 @@ import { createContext } from 'svelte';
 import { resolve } from '$app/paths';
 import { getVerdict } from '#lib/verdict.ts';
 import {
+	createConfig,
+	deleteConfig,
+	getConfigs,
+	importConfigs,
+	updateConfig
+} from '#lib/configs.remote.ts';
+import {
 	analyzeWall,
 	criticalOutdoorTemperature,
 	indoorHumidity,
@@ -30,15 +37,18 @@ function read<T>(key: string): T | undefined {
 	}
 }
 
-/** A template from the catalogue or, if `config`, one of the user's configs */
-export type Template = Assembly & { config?: boolean };
+/**
+ * A template from the catalogue or, if `config`, one of the user's configs; `local` if that is
+ * saved in this browser rather than the user's account
+ */
+export type Template = Assembly & { config?: boolean; local?: boolean };
 
 /**
- * URL of a template: catalogue templates at `/[id]`, configs from this browser's localStorage at
- * `/local/[id]`. Without a template: an empty build-up
+ * URL of a template: catalogue templates and configs in the user's account at `/[id]`, configs from
+ * this browser's localStorage at `/local/[id]`. Without a template: an empty build-up
  */
-export const templatePath = (template?: Pick<Template, 'id' | 'config'>) =>
-	template?.config
+export const templatePath = (template?: Pick<Template, 'id' | 'local'>) =>
+	template?.local
 		? resolve('/(calculator)/local/[id]', { id: template.id })
 		: resolve('/(calculator)/[[id]]', template ? { id: template.id } : {});
 
@@ -128,11 +138,20 @@ export class WallModel {
 
 	#catalog: () => Catalog;
 	materials = $derived.by(() => this.#catalog().materials);
-	/** The user's configs, saved in this browser */
-	configs = $state<Assembly[]>([]);
+	/** The signed-in user's configs from the database; `null` when signed out */
+	#account: () => Assembly[] | null;
+	/** Configs saved in this browser, used while signed out */
+	#local = $state<Assembly[]>([]);
+	/** True if configs are stored in the user's account rather than this browser */
+	signedIn = $derived.by(() => !!this.#account());
+	/**
+	 * The user's configs. Changes are shown straight away, until the account's configs come back
+	 * from the server
+	 */
+	configs = $derived.by(() => this.#account() ?? this.#local);
 	templates = $derived.by((): Template[] => [
 		...this.#catalog().assemblies,
-		...this.configs.map((c) => ({ ...c, config: true }))
+		...this.configs.map((c) => ({ ...c, config: true, local: !this.signedIn }))
 	]);
 	template = $derived(this.templates.find((t) => t.id === this.templateId));
 	/** True if the build-up differs from the loaded template */
@@ -156,8 +175,9 @@ export class WallModel {
 	criticalMould = $derived(criticalOutdoorTemperature(this.activeLayers, this.climate, 'mould'));
 
 	/** Starts with the template `templateId` or, without it, an empty build-up */
-	constructor(catalog: () => Catalog, templateId?: string) {
+	constructor(catalog: () => Catalog, account: () => Assembly[] | null, templateId?: string) {
 		this.#catalog = catalog;
+		this.#account = account;
 		if (templateId) this.loadTemplate(templateId);
 	}
 
@@ -224,15 +244,36 @@ export class WallModel {
 		return strip($state.snapshot(this.layers));
 	}
 
-	/** Reads the user's configs and loads the start template if it is one of them */
+	/**
+	 * Reads the configs saved in this browser and loads the start template if it is one of them.
+	 * Signed in, they are moved to the user's account
+	 */
 	restore(templateId?: string) {
-		this.configs = readConfigs();
-		// Configs aren't known during server rendering
+		const local = readConfigs();
+		if (this.signedIn) {
+			if (local.length) void this.#import(local);
+		} else {
+			this.#local = local;
+		}
+		// Browser configs aren't known during server rendering
 		if (templateId) this.loadTemplate(templateId);
 	}
 
+	/** Uploads the browser's configs to the user's account, where they get new ids */
+	async #import(local: Assembly[]) {
+		this.configs = [...this.configs, ...local];
+		try {
+			await importConfigs(local.map(toInput));
+		} catch {
+			// They stay in this browser and are uploaded on the next visit
+			return;
+		}
+		localStorage.removeItem(CONFIGS_KEY);
+		localStorage.removeItem(LEGACY_CONFIGS_KEY);
+	}
+
 	/** Stores the current build-up as a config, updating the config with `id` if given */
-	saveConfig({
+	async saveConfig({
 		id,
 		name,
 		description,
@@ -243,40 +284,63 @@ export class WallModel {
 		description: string;
 		keywords: string[];
 	}) {
-		const config: Assembly = {
-			id: id ?? crypto.randomUUID(),
-			name,
-			description,
-			keywords,
-			builtIn: false,
-			layers: this.snapshot()
-		};
-		const index = this.configs.findIndex((c) => c.id === config.id);
-		if (index >= 0) this.configs[index] = config;
-		else this.configs.push(config);
-		this.#persist();
-		return config.id;
+		const values = { name, description, keywords, builtIn: false, layers: this.snapshot() };
+		if (id) {
+			const config: Assembly = { id, ...values };
+			await this.#commit(
+				this.configs.map((c) => (c.id === id ? config : c)),
+				() => updateConfig(toInput(config))
+			);
+			return id;
+		}
+		if (this.signedIn) {
+			// The server creates the id
+			({ id } = await createConfig(values));
+		} else {
+			id = crypto.randomUUID();
+		}
+		const config: Assembly = { id, ...values };
+		await this.#commit([...this.configs.filter((c) => c.id !== id), config], async () => {});
+		return id;
 	}
 
 	/** Changes name, description or tags of a config but keeps its layers */
-	updateConfigDetails(
+	async updateConfigDetails(
 		id: string,
 		details: Partial<Pick<Assembly, 'name' | 'description' | 'keywords'>>
 	) {
 		const config = this.configs.find((c) => c.id === id);
 		if (!config) return;
-		Object.assign(config, details);
-		this.#persist();
+		const updated = { ...config, ...details };
+		await this.#commit(
+			this.configs.map((c) => (c.id === id ? updated : c)),
+			() => updateConfig(toInput(updated))
+		);
 	}
 
-	deleteConfig(id: string) {
-		this.configs = this.configs.filter((c) => c.id !== id);
-		this.#persist();
+	async deleteConfig(id: string) {
+		await this.#commit(
+			this.configs.filter((c) => c.id !== id),
+			() => deleteConfig(id)
+		);
 	}
 
-	#persist() {
-		localStorage.setItem(CONFIGS_KEY, JSON.stringify($state.snapshot(this.configs)));
-		localStorage.removeItem(LEGACY_CONFIGS_KEY);
+	/** Shows the changed configs and stores them in the account or, signed out, this browser */
+	async #commit(configs: Assembly[], store: () => Promise<unknown>) {
+		this.configs = configs;
+		if (!this.signedIn) {
+			this.#local = configs;
+			localStorage.setItem(CONFIGS_KEY, JSON.stringify($state.snapshot(configs)));
+			localStorage.removeItem(LEGACY_CONFIGS_KEY);
+			return;
+		}
+		try {
+			await store();
+		} catch (e) {
+			// Back to what is stored
+			void getConfigs().refresh();
+			throw e;
+		}
 	}
 
 	applyClimatePreset(key: ClimatePreset) {
@@ -290,5 +354,14 @@ export class WallModel {
 		this.humidityClass = humidityClass;
 	}
 }
+
+/** A config as sent to the server */
+const toInput = ({ id, name, description, keywords, layers }: Assembly) => ({
+	id,
+	name,
+	description,
+	keywords,
+	layers
+});
 
 export const [getWall, setWall] = createContext<WallModel>();

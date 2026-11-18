@@ -15,22 +15,25 @@
 	import ResultSummary from '#lib/components/ResultSummary.svelte';
 	import WorkbenchHeader from '#lib/components/WorkbenchHeader.svelte';
 	import Icon, { type IconName } from '#lib/components/ui/Icon.svelte';
-	import type { Catalog } from '#lib/physics/types.ts';
+	import type { Assembly, Catalog } from '#lib/physics/types.ts';
 	import { verdictStyles } from '#lib/verdict.ts';
 	import { WallModel, setWall, templatePath } from '#lib/wall.svelte.ts';
 
 	interface Props {
 		catalog: Catalog;
 		user: ClientUser | null;
+		/** The signed-in user's build-ups; `null` when signed out */
+		configs: Assembly[] | null;
 		/** Template or saved build-up to show; without it the build-up starts empty */
 		templateId?: string;
 	}
 
-	let { catalog, user, templateId }: Props = $props();
+	let { catalog, user, configs, templateId }: Props = $props();
 
 	const wall = setWall(
 		new WallModel(
 			() => catalog,
+			() => configs,
 			untrack(() => templateId)
 		)
 	);
