@@ -1,5 +1,25 @@
 # vibes-dpc
 
+## 0.3.0
+
+### Minor Changes
+
+- [`15ae236`](https://github.com/bztes/vibes-dpc/commit/15ae23694ad39c82b44df83b52d917251574bb26) Thanks [@bztes](https://github.com/bztes)! - Redesigned admin panel with user management and optional sign-up
+
+### Patch Changes
+
+- [`6e34c1b`](https://github.com/bztes/vibes-dpc/commit/6e34c1b86c08fc75a487a088fcdd4e9554aef951) Thanks [@bztes](https://github.com/bztes)! - Save build-ups to the account when signed in
+
+- [`4e7cda2`](https://github.com/bztes/vibes-dpc/commit/4e7cda2966c63a2dc2bd710bc6ff74035d8eb11a) Thanks [@bztes](https://github.com/bztes)! - Better climate presets
+
+- [`f344835`](https://github.com/bztes/vibes-dpc/commit/f34483566d91e350aee4dd696febd8662895974a) Thanks [@bztes](https://github.com/bztes)! - Add and edit layers in a dialog
+
+- [`6e34c1b`](https://github.com/bztes/vibes-dpc/commit/6e34c1b86c08fc75a487a088fcdd4e9554aef951) Thanks [@bztes](https://github.com/bztes)! - Show where a build-up is saved
+
+- [`2b52af7`](https://github.com/bztes/vibes-dpc/commit/2b52af74665d20704cf051bf2a1285beb62e3de9) Thanks [@bztes](https://github.com/bztes)! - Move climate to the left sidebar and make it more compact
+
+- [`a62b31b`](https://github.com/bztes/vibes-dpc/commit/a62b31bcf432ac63ec583b01fb6f3f598adc122b) Thanks [@bztes](https://github.com/bztes)! - All actions in one top-right menu, with a disclaimer
+
 ## 0.2.0
 
 ### Minor Changes
