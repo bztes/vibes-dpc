@@ -68,7 +68,7 @@
 	let verdict = $derived(wall.verdict);
 
 	/** Large screens: sidebar sections folded down to their summary */
-	let collapsed = $state({ result: false, climate: false });
+	let collapsed = $state({ layers: false, result: false, climate: false });
 
 	// Drag the sheet handle up or down; a tap toggles it
 	let dragStart: number | undefined;
@@ -89,17 +89,6 @@
 		if (next === 'layers' && !wall.layers.length) sheetOpen = true;
 	}
 </script>
-
-{#snippet panelHead(icon: IconName, title: string, extra?: Snippet)}
-	<div
-		class="sticky top-0 z-10 flex h-11 shrink-0 items-center gap-2 border-b border-line bg-surface-2 px-4 text-[13px] font-semibold max-lg:hidden"
-	>
-		<Icon name={icon} size={15} class="text-fg-subtle" />
-		{title}
-		<span class="flex-1"></span>
-		{@render extra?.()}
-	</div>
-{/snippet}
 
 {#snippet collapsibleHead(
 	icon: IconName,
@@ -139,11 +128,9 @@
 {/snippet}
 
 {#snippet layerCount()}
-	<span class="text-xs font-normal text-fg-subtle tabular-nums">
-		{wall.layers.length}
-		{wall.layers.length === 1 ? 'layer' : 'layers'}
-		{#if wall.layers.length}· {fmt(wall.result.totalThickness, 0)} mm{/if}
-	</span>
+	{wall.layers.length}
+	{wall.layers.length === 1 ? 'layer' : 'layers'}
+	{#if wall.layers.length}· {fmt(wall.result.totalThickness, 0)} mm{/if}
 {/snippet}
 
 <div class="flex h-dvh flex-col overflow-hidden bg-surface">
@@ -214,8 +201,10 @@
 					class="flex min-h-0 flex-1 scroll-thin flex-col overflow-y-auto overscroll-contain pb-[calc(1rem+env(safe-area-inset-bottom))]"
 				>
 					<section class={[tab !== 'layers' && 'max-lg:hidden']}>
-						{@render panelHead('layers', 'Build-up', layerCount)}
-						<LayerEditor />
+						{@render collapsibleHead('layers', 'Build-up', 'layers', layerCount)}
+						<div class={[collapsed.layers && 'lg:hidden']}>
+							<LayerEditor />
+						</div>
 					</section>
 					<section class={[tab !== 'climate' && 'max-lg:hidden']}>
 						{@render collapsibleHead('thermometer', 'Climate', 'climate', climateSummary)}

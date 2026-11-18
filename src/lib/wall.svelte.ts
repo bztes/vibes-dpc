@@ -56,7 +56,8 @@ function createLayer(values: AssemblyLayer): Layer {
 	return { id: `layer-${nextId++}`, ...values };
 }
 
-function fromMaterial(material: Material, thickness = material.thickness): Layer {
+/** A new layer with the values of a catalogue material */
+export function fromMaterial(material: Material, thickness = material.thickness): Layer {
 	return createLayer({
 		material: material.id,
 		name: material.name,
@@ -169,16 +170,17 @@ export class WallModel {
 		this.layers = template.layers.map(createLayer);
 	}
 
-	/** Inserts a layer before `index`; by default on the outside */
-	addLayer(materialId: string, index = this.layers.length) {
-		const material = this.material(materialId);
-		if (material) this.layers.splice(index, 0, fromMaterial(material));
+	/** Inserts a layer before `index`, by default on the outside */
+	addLayer(layer: Layer, index = this.layers.length) {
+		this.layers.splice(index, 0, layer);
 	}
 
 	/** Swaps the material of a layer but keeps its thickness */
 	replaceMaterial(index: number, materialId: string) {
 		const material = this.material(materialId);
-		if (material) this.layers[index] = fromMaterial(material, this.layers[index].thickness);
+		if (!material) return;
+		const { id, thickness } = this.layers[index];
+		this.layers[index] = { ...fromMaterial(material, thickness), id };
 	}
 
 	toggleLayer(index: number) {

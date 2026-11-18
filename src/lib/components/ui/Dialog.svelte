@@ -15,6 +15,7 @@
 		/** Buttons at the bottom */
 		actions?: Snippet;
 		onclose?: () => void;
+		class?: string;
 	}
 
 	let {
@@ -25,7 +26,8 @@
 		size = 'md',
 		children,
 		actions,
-		onclose
+		onclose,
+		class: className
 	}: Props = $props();
 
 	let dialog = $state<HTMLDialogElement>();
@@ -49,7 +51,8 @@
 		'm-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] overflow-y-auto rounded-2xl bg-surface p-0 text-fg shadow-float ring-1 ring-line backdrop:bg-black/50 backdrop:backdrop-blur-sm',
 		size === 'sm' && 'max-w-sm',
 		size === 'md' && 'max-w-lg',
-		size === 'lg' && 'max-w-2xl'
+		size === 'lg' && 'max-w-2xl',
+		className
 	]}
 >
 	<div class="flex items-start gap-3.5 px-6 pt-6">

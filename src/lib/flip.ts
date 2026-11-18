@@ -7,13 +7,16 @@ function bounds(element: HTMLElement) {
 	let bottom = window.innerHeight;
 	let right = window.innerWidth;
 	for (let parent = element.parentElement; parent; parent = parent.parentElement) {
-		const { overflowX, overflowY } = getComputedStyle(parent);
-		if (overflowX === 'visible' && overflowY === 'visible') continue;
-		const rect = parent.getBoundingClientRect();
-		top = Math.max(top, rect.top);
-		left = Math.max(left, rect.left);
-		bottom = Math.min(bottom, rect.bottom);
-		right = Math.min(right, rect.right);
+		const { overflowX, overflowY, position } = getComputedStyle(parent);
+		if (overflowX !== 'visible' || overflowY !== 'visible') {
+			const rect = parent.getBoundingClientRect();
+			top = Math.max(top, rect.top);
+			left = Math.max(left, rect.left);
+			bottom = Math.min(bottom, rect.bottom);
+			right = Math.min(right, rect.right);
+		}
+		// Ancestors of a fixed or top-layer element (e.g. a modal dialog) don't clip it
+		if (position === 'fixed' || parent.matches(':modal, :popover-open')) break;
 	}
 	return { top, left, bottom, right };
 }
