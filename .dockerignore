@@ -1,7 +1,6 @@
 node_modules
 build
 .svelte-kit
-src/lib/paraglide
 *.db
 .env
 .env.*

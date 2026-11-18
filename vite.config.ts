@@ -1,4 +1,3 @@
-import { paraglideVitePlugin } from '@inlang/paraglide-js';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
@@ -19,12 +18,6 @@ export default defineConfig({
 			// The service worker serves cached pages at other URLs offline, so assets need absolute paths
 			paths: { relative: false },
 			experimental: { remoteFunctions: true }
-		}),
-
-		paraglideVitePlugin({
-			project: './project.inlang',
-			outdir: './src/lib/paraglide',
-			emitTsDeclarations: true
 		})
 	],
 	test: {
