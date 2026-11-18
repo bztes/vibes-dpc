@@ -12,7 +12,6 @@
 	import CloudSnow from '@lucide/svelte/icons/cloud-snow';
 	import ArrowDown from '@lucide/svelte/icons/arrow-down';
 	import ArrowUp from '@lucide/svelte/icons/arrow-up';
-	import BookOpen from '@lucide/svelte/icons/book-open';
 	import BrickWall from '@lucide/svelte/icons/brick-wall';
 	import ChartArea from '@lucide/svelte/icons/chart-area';
 	import ChartSpline from '@lucide/svelte/icons/chart-spline';
@@ -90,7 +89,6 @@
 		section: ChartArea,
 		chart: ChartSpline,
 		table: Table2,
-		book: BookOpen,
 		gauge: Gauge,
 		wall: BrickWall,
 		copyPlus: CopyPlus,

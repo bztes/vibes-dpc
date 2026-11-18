@@ -1,9 +1,7 @@
-<!-- Toolbar of the calculator: build-up name, status and save actions -->
+<!-- Toolbar of the calculator: build-up name, status, save button and menu -->
 <script lang="ts">
-	import { dismiss } from '#lib/dismiss.ts';
 	import type { ClientUser } from '#lib/catalog.remote.ts';
 	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
 	import { deleteAssembly, saveAssembly } from '#lib/catalog.remote.ts';
 	import AppIcon from '#lib/components/AppIcon.svelte';
 	import UserMenu from '#lib/components/UserMenu.svelte';
@@ -14,11 +12,10 @@
 
 	interface Props {
 		user: ClientUser | null;
-		onabout: () => void;
 		onlibrary: () => void;
 	}
 
-	let { user, onabout, onlibrary }: Props = $props();
+	let { user, onlibrary }: Props = $props();
 
 	const wall = getWall();
 	let admin = $derived(!!user?.admin);
@@ -136,6 +133,27 @@
 	</button>
 {/snippet}
 
+{#snippet actions()}
+	{#if wall.template && wall.modified}
+		{@render item('reset', 'Discard changes', () => {
+			menuOpen = false;
+			wall.loadTemplate(wall.templateId);
+		})}
+	{/if}
+	{#if own}
+		{@render item('copyPlus', 'Save as copy', saveAsNew)}
+	{:else if admin}
+		{#if wall.template}
+			{@render item('check', 'Update template', update, wall.layers.length === 0)}
+		{/if}
+		{@render item('layers', 'Save as new template', saveAsTemplate, wall.layers.length === 0)}
+	{/if}
+	{#if editable}
+		<hr class="my-1 border-line" />
+		{@render item('trash', 'Delete', confirmDelete, false, true)}
+	{/if}
+{/snippet}
+
 <header
 	class="relative z-30 flex h-14 shrink-0 items-center gap-2 border-b border-line bg-surface px-2 pt-[env(safe-area-inset-top)] sm:gap-3 sm:px-3"
 	style:box-sizing="content-box"
@@ -193,14 +211,6 @@
 	{#if error}<p class="hidden text-xs text-critical-ink sm:block">{error}</p>{/if}
 
 	<div class="flex shrink-0 items-center gap-1 sm:gap-1.5">
-		{#if wall.template && wall.modified}
-			<Button
-				variant="ghost"
-				icon="reset"
-				label="Discard changes"
-				onclick={() => wall.loadTemplate(wall.templateId)}
-			/>
-		{/if}
 		<Button
 			variant="accent"
 			icon="save"
@@ -209,58 +219,12 @@
 		>
 			<span class="max-sm:sr-only">{own ? 'Save' : 'Save as mine'}</span>
 		</Button>
-		<div class="relative" {@attach menuOpen && dismiss(() => (menuOpen = false))}>
-			<Button
-				variant="ghost"
-				icon="more"
-				label="More actions"
-				disabled={busy}
-				aria-haspopup="menu"
-				aria-expanded={menuOpen}
-				onclick={() => (menuOpen = !menuOpen)}
-			/>
-			{#if menuOpen}
-				<div
-					role="menu"
-					class="absolute top-full right-0 z-50 mt-2 flex w-60 flex-col rounded-xl bg-surface p-1 shadow-float ring-1 ring-line"
-				>
-					{@render item('book', 'How it works', () => {
-						menuOpen = false;
-						onabout();
-					})}
-					{#if own}
-						{@render item('copyPlus', 'Save as copy', saveAsNew)}
-					{:else if admin}
-						<hr class="my-1 border-line" />
-						{#if wall.template}
-							{@render item('check', 'Update template', update, wall.layers.length === 0)}
-						{/if}
-						{@render item(
-							'layers',
-							'Save as new template',
-							saveAsTemplate,
-							wall.layers.length === 0
-						)}
-					{/if}
-					{#if editable}
-						<hr class="my-1 border-line" />
-						{@render item('trash', 'Delete', confirmDelete, false, true)}
-					{/if}
-				</div>
-			{/if}
-		</div>
-		{#if user}
-			<span class="max-sm:hidden"><UserMenu {user} /></span>
-		{:else}
-			<a
-				href={resolve('/login')}
-				title="Sign in"
-				class="flex h-10 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-fg-muted transition hover:bg-surface-3 hover:text-fg focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none sm:h-9"
-			>
-				<Icon name="login" size={16} />
-				<span class="max-lg:sr-only">Sign in</span>
-			</a>
-		{/if}
+		<UserMenu
+			{user}
+			bind:open={menuOpen}
+			disabled={busy}
+			actions={own || admin || (wall.template && wall.modified) ? actions : undefined}
+		/>
 	</div>
 </header>
 

@@ -8,7 +8,6 @@
 	import { onMount, untrack, type Snippet } from 'svelte';
 	import { cacheForOffline } from '#lib/offline.ts';
 	import { fmt } from '#lib/format.ts';
-	import AboutDialog from '#lib/components/AboutDialog.svelte';
 	import ChartCanvas from '#lib/components/ChartCanvas.svelte';
 	import ClimatePanel from '#lib/components/ClimatePanel.svelte';
 	import LayerEditor from '#lib/components/LayerEditor.svelte';
@@ -63,7 +62,6 @@
 	/** Small screens: the sheet covers the canvas */
 	let sheetOpen = $state(false);
 
-	let about = $state<AboutDialog>();
 	let library = $state<Library>();
 	let verdict = $derived(wall.verdict);
 
@@ -134,7 +132,7 @@
 {/snippet}
 
 <div class="flex h-dvh flex-col overflow-hidden bg-surface">
-	<WorkbenchHeader {user} onabout={() => about?.open()} onlibrary={() => library?.open()} />
+	<WorkbenchHeader {user} onlibrary={() => library?.open()} />
 
 	<div
 		class="relative flex min-h-0 flex-1 flex-col lg:grid lg:grid-cols-[21rem_minmax(0,1fr)_21rem] lg:grid-rows-[minmax(0,1fr)] xl:grid-cols-[25rem_minmax(0,1fr)_24rem]"
@@ -237,5 +235,4 @@
 	</div>
 </div>
 
-<AboutDialog bind:this={about} />
 <Library bind:this={library} />

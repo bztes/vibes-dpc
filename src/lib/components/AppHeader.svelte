@@ -31,6 +31,6 @@
 				<span class="text-[15px] font-medium tracking-tight text-fg-muted">{section}</span>
 			{/if}
 		</div>
-		{#if user}<UserMenu {user} />{/if}
+		<UserMenu {user} />
 	</div>
 </header>
